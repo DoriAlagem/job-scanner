@@ -45,3 +45,32 @@ jobs:
             sleep 5
           done
           exit 1
+
+      - name: Notify on workflow failure
+        if: failure()
+        env:
+          GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python - <<'EOF'
+          import os, smtplib
+          from email.mime.text import MIMEText
+
+          gmail_from = os.environ["GMAIL_FROM"]
+          app_password = os.environ["GMAIL_APP_PASSWORD"]
+
+          msg = MIMEText(
+              "The job scanner workflow failed on GitHub Actions.\n\n"
+              "Check the run logs at:\n"
+              "https://github.com/DORI2001/job-scanner/actions\n",
+              "plain", "utf-8"
+          )
+          msg["Subject"] = "Job Scanner: workflow failed"
+          msg["From"] = gmail_from
+          msg["To"] = gmail_from
+
+          with smtplib.SMTP("smtp.gmail.com", 587) as s:
+              s.starttls()
+              s.login(gmail_from, app_password)
+              s.sendmail(gmail_from, [gmail_from], msg.as_string())
+          EOF
