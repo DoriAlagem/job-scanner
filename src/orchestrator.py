@@ -6,14 +6,13 @@ from src.email_formatter import format_digest
 from src.email_sender import send
 from src.matcher import match_batch, QuotaExhausted, _BATCH_SIZE
 from src.models import JobListing
-from src.scrapers import alljobs, drushim, indeed, jobmaster, linkedin
+from src.scrapers import alljobs, drushim, jobmaster, linkedin
 
 _SCRAPER_BY_SOURCE = {
     "drushim": drushim,
     "jobmaster": jobmaster,
     "alljobs": alljobs,
     "linkedin": linkedin,
-    "indeed": indeed,
 }
 _ENRICH_DELAY = 0.6
 
@@ -67,7 +66,7 @@ def run(
     cv_text = load_cv_text(cv_path)
     store = DedupStore(seen_path)
 
-    all_listings = _scrape_all((drushim, jobmaster, alljobs, linkedin, indeed))
+    all_listings = _scrape_all((drushim, jobmaster, alljobs, linkedin))
     logger.info("Total listings before dedup: %d", len(all_listings))
 
     new_listings = [l for l in all_listings if not store.is_seen(l.url)]
