@@ -1,10 +1,19 @@
 import logging
+import time
 from src.config_loader import load_config, load_cv_text
 from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
 from src.matcher import match_batch, QuotaExhausted, _BATCH_SIZE
 from src.scrapers import alljobs, drushim, jobmaster, linkedin
+
+_SCRAPER_BY_SOURCE = {
+    "drushim": drushim,
+    "jobmaster": jobmaster,
+    "alljobs": alljobs,
+    "linkedin": linkedin,
+}
+_ENRICH_DELAY = 0.6  # seconds between job-page fetches to be polite
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -37,6 +46,22 @@ def run() -> None:
     # Deduplicate
     new_listings = [l for l in all_listings if not store.is_seen(l.url)]
     logger.info("New listings after dedup: %d", len(new_listings))
+
+    # Enrich each listing with its full description from the job page.
+    # The short scraped snippets often miss the requirements section.
+    enriched_count = 0
+    for listing in new_listings:
+        scraper = _SCRAPER_BY_SOURCE.get(listing.source)
+        if scraper and hasattr(scraper, "fetch_full_description"):
+            try:
+                full = scraper.fetch_full_description(listing.url)
+                if full and len(full) > len(listing.description):
+                    listing.description = full
+                    enriched_count += 1
+            except Exception as e:
+                logger.debug("enrich failed for %s: %s", listing.url, e)
+            time.sleep(_ENRICH_DELAY)
+    logger.info("Enriched %d/%d listings with full descriptions", enriched_count, len(new_listings))
 
     # Match in batches
     results = []
