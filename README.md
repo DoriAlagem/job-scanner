@@ -6,7 +6,7 @@ Automated job scanner for the Israeli market. Runs twice daily, scrapes major jo
 
 1. Scrapes LinkedIn, drushim.co.il, jobmaster.co.il, and alljobs.co.il
 2. Filters by center district location
-3. Scores each listing against your CV and preferences via Gemini Flash
+3. Scores each listing against your CV and preferences via Groq (Llama 3.1)
 4. Sends a digest email with listings scoring ≥ 70%
 5. Tracks seen listings so you never get the same job twice
 
@@ -26,7 +26,7 @@ Add the following to your repo's **Settings → Secrets and variables → Action
 
 | Secret | Description |
 |--------|-------------|
-| `GEMINI_API_KEY` | From [Google AI Studio](https://aistudio.google.com) |
+| `GROQ_API_KEY` | From [Groq Console](https://console.groq.com) |
 | `GMAIL_FROM` | Your Gmail address |
 | `GMAIL_APP_PASSWORD` | From [Google Account → App Passwords](https://myaccount.google.com/apppasswords) |
 
@@ -50,7 +50,7 @@ pytest
 To run the scanner locally:
 
 ```bash
-export GEMINI_API_KEY=...
+export GROQ_API_KEY=...
 export GMAIL_FROM=...
 export GMAIL_APP_PASSWORD=...
 python -m src.orchestrator

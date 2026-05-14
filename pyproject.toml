@@ -11,7 +11,7 @@ dependencies = [
     "pypdf>=4.0",
     "requests>=2.31",
     "beautifulsoup4>=4.12",
-    "google-genai>=1.0",
+    "groq>=0.11",
     "python-dotenv>=1.0",
 ]
 
