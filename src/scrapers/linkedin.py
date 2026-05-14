@@ -14,7 +14,7 @@ _HEADERS = {
         "Chrome/120.0.0.0 Safari/537.36"
     )
 }
-_SEARCH_TERMS = ["python developer", "software engineer", "devops", "qa automation", "backend developer", "data engineer"]
+_SEARCH_TERMS = ["python", "software engineer", "devops", "qa automation", "backend", "data engineer", "machine learning", "cloud engineer"]
 _REQUEST_DELAY = 2.0
 # f_TPR=r2592000 = posted in last 30 days; dedup prevents re-sending seen jobs
 _BASE_URL = "https://il.linkedin.com/jobs/search"
