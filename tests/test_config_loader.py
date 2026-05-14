@@ -1,7 +1,13 @@
 import pytest
 import yaml
 from pathlib import Path
-from src.config_loader import load_config, load_cv_text, Config
+from src.config_loader import load_config, load_cv_text, Config, FilterConfig
+
+_FILTERS = {
+    "seniority_keywords": [" senior", "senior ", "principal"],
+    "unwanted_keywords": ["full stack", "freelance"],
+    "max_years_experience": 2,
+}
 
 
 @pytest.fixture
@@ -14,6 +20,7 @@ def config_file(tmp_path):
         "match_threshold": 70,
         "email_language": "English",
         "email_to": "dor3382@gmail.com",
+        "filters": _FILTERS,
     }
     p = tmp_path / "config.yaml"
     p.write_text(yaml.dump(data))
@@ -29,6 +36,14 @@ def test_load_config_returns_correct_values(config_file):
     assert config.match_threshold == 70
     assert config.email_language == "English"
     assert config.email_to == "dor3382@gmail.com"
+
+
+def test_load_config_loads_filters(config_file):
+    config = load_config(str(config_file))
+    assert isinstance(config.filters, FilterConfig)
+    assert " senior" in config.filters.seniority_keywords
+    assert "full stack" in config.filters.unwanted_keywords
+    assert config.filters.max_years_experience == 2
 
 
 def test_load_config_raises_on_missing_file():

@@ -5,6 +5,13 @@ from pypdf import PdfReader
 
 
 @dataclass
+class FilterConfig:
+    seniority_keywords: tuple[str, ...]
+    unwanted_keywords: tuple[str, ...]
+    max_years_experience: int
+
+
+@dataclass
 class Config:
     roles: list[str]
     experience_levels: list[str]
@@ -13,6 +20,7 @@ class Config:
     match_threshold: int
     email_language: str
     email_to: str
+    filters: FilterConfig
 
 
 def load_config(config_path: str = "config.yaml") -> Config:
@@ -23,10 +31,17 @@ def load_config(config_path: str = "config.yaml") -> Config:
     with open(path) as f:
         data = yaml.safe_load(f)
 
-    required = ["roles", "experience_levels", "location", "regions", "match_threshold", "email_language", "email_to"]
+    required = ["roles", "experience_levels", "location", "regions", "match_threshold", "email_language", "email_to", "filters"]
     missing = [k for k in required if k not in data]
     if missing:
         raise ValueError(f"Config is missing required fields: {missing}")
+
+    f = data["filters"]
+    filters = FilterConfig(
+        seniority_keywords=tuple(f.get("seniority_keywords", [])),
+        unwanted_keywords=tuple(f.get("unwanted_keywords", [])),
+        max_years_experience=int(f.get("max_years_experience", 2)),
+    )
 
     return Config(
         roles=data["roles"],
@@ -36,6 +51,7 @@ def load_config(config_path: str = "config.yaml") -> Config:
         match_threshold=data["match_threshold"],
         email_language=data["email_language"],
         email_to=data["email_to"],
+        filters=filters,
     )
 
 
