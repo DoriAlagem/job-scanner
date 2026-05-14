@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 
 from google import genai
@@ -10,7 +11,11 @@ from src.models import JobListing
 
 logger = logging.getLogger(__name__)
 
-_MODEL_NAME = "gemini-2.0-flash"
+# gemini-1.5-flash: free tier 15 RPM, 1500 RPD — more reliable than 2.0-flash free tier
+_MODEL_NAME = "gemini-1.5-flash"
+_REQUEST_DELAY = 4.5  # seconds between calls — stays safely under 15 RPM
+_MAX_RETRIES = 3
+_RETRY_DELAY = 60  # seconds to wait on 429
 
 
 @dataclass
@@ -29,12 +34,22 @@ def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | No
     client = genai.Client(api_key=api_key)
 
     prompt = _build_prompt(listing, cv_text, config)
-    try:
-        response = client.models.generate_content(model=_MODEL_NAME, contents=prompt)
-        return _parse_response(response.text, listing)
-    except Exception as e:
-        logger.warning("matcher: Gemini call failed for %r: %s", listing.title, e)
-        return None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            response = client.models.generate_content(model=_MODEL_NAME, contents=prompt)
+            time.sleep(_REQUEST_DELAY)
+            return _parse_response(response.text, listing)
+        except Exception as e:
+            err = str(e)
+            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                logger.warning("matcher: rate limited on %r — waiting %ds (attempt %d/%d)",
+                               listing.title, _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
+                time.sleep(_RETRY_DELAY)
+            else:
+                logger.warning("matcher: Gemini call failed for %r: %s", listing.title, e)
+                return None
+    logger.warning("matcher: giving up on %r after %d attempts", listing.title, _MAX_RETRIES)
+    return None
 
 
 def _passes_region_filter(listing: JobListing, config: Config) -> bool:
