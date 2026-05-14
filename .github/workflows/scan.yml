@@ -36,12 +36,29 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add seen_jobs.json
-          git diff --staged --quiet && exit 0
-          git commit -m "chore: update seen_jobs.json [skip ci]"
-          # Retry up to 3 times with rebase in case master moved during the run
+
+          # Save our generated file before touching git state
+          cp seen_jobs.json /tmp/new_seen.json
+
+          # Retry loop: fetch latest master, merge JSON files, commit, push
           for i in 1 2 3; do
-            git pull --rebase origin master && git push && exit 0
+            git fetch origin master
+            git reset --hard FETCH_HEAD
+
+            python3 - <<'PYEOF'
+          import json
+          with open('seen_jobs.json') as f:
+              remote = json.load(f)
+          with open('/tmp/new_seen.json') as f:
+              new = json.load(f)
+          with open('seen_jobs.json', 'w') as f:
+              json.dump({**remote, **new}, f, indent=2)
+          PYEOF
+
+            git add seen_jobs.json
+            git diff --staged --quiet && exit 0
+            git commit -m "chore: update seen_jobs.json [skip ci]"
+            git push origin master && exit 0
             sleep 5
           done
           exit 1
