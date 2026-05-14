@@ -44,10 +44,29 @@ _SENIORITY_KEYWORDS = (
     "בכיר", "ראש צוות", " ראש ",
 )
 
+# User-rejected role types — auto-skip without sending to LLM
+_UNWANTED_KEYWORDS = (
+    # Full stack — not wanted
+    "full stack", "fullstack", "full-stack",
+    # UI/UX — not wanted
+    "ui/ux", "ux/ui", "ui ux", " ux ", " ui ", "ui designer", "ux designer",
+    # Economics / accounting — not wanted
+    "economist", "economics", "כלכלן", "כלכלנית", "חשב", "רואה חשבון",
+    # Freelance / contract — not wanted
+    "freelance", "פרילנס", "פרילנסר",
+    # Coordinators / appointment setters — not technical
+    "מתאם פגישות", "מתאמת פגישות", "מתאם/ת פגישות", "מתאם", "מתאמת",
+    "appointment setter", "scheduling coordinator",
+)
+
 
 def _passes_title_filter(listing: JobListing) -> bool:
     title = f" {listing.title.lower()} "
-    return not any(kw in title for kw in _SENIORITY_KEYWORDS)
+    if any(kw in title for kw in _SENIORITY_KEYWORDS):
+        return False
+    if any(kw in title for kw in _UNWANTED_KEYWORDS):
+        return False
+    return True
 
 
 def _passes_region_filter(listing: JobListing, config: Config) -> bool:
@@ -142,6 +161,11 @@ Skills (from CV): Python, C, C++, SQL, REST APIs, distributed systems, MQTT, Num
 2. Senior / lead / principal / head-of role (Hebrew: בכיר, ראש צוות).
 3. Hardware IT support (PC tech, desktop tech, hardware repair). Only L1 helpdesk OK.
 4. PRIMARY required skill is one the candidate has zero exposure to (e.g. Go, RPG, .NET).
+5. Full-stack development role (frontend + backend mix). Backend-only is fine.
+6. UI / UX designer role (not wanted).
+7. Economics / accounting / finance role (כלכלן, רואה חשבון, חשב — not wanted).
+8. Freelance / contract / part-time consulting (פרילנס — not wanted; permanent only).
+9. Non-technical coordinator / appointment-setter / scheduling role (מתאם פגישות — not wanted).
 
 ## Soft rules
 - Most (not all) primary skills should overlap. Missing secondary skills → reduce moderately.
