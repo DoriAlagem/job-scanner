@@ -1,10 +1,10 @@
 name: Job Scanner
 
-on:
+"on":
   schedule:
     # 06:00 and 18:00 Israel time (UTC+3) = 03:00 and 15:00 UTC
     - cron: "0 3,15 * * *"
-  workflow_dispatch:  # allow manual trigger for testing
+  workflow_dispatch:
 
 permissions:
   contents: write  # needed to commit seen_jobs.json back
