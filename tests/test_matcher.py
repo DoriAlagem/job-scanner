@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.matcher import match, match_batch, MatchResult
+from src.matcher import match, match_batch, MatchResult, _build_batch_prompt
 from src.models import JobListing
 from src.config_loader import Config, FilterConfig
 
@@ -256,6 +256,27 @@ def test_batch_returns_results_for_multiple_listings(cv_text, config):
     assert outcome.results[0].score == 85
     assert outcome.results[1].score == 60
     assert outcome.failed_listings == []
+
+
+def test_prompt_reflects_config_thresholds(cv_text):
+    cfg = Config(
+        roles=[], experience_levels=[], location="Israel",
+        regions=["Tel Aviv"],
+        match_threshold=70, email_language="English", email_to="x@x.com",
+        filters=FilterConfig(
+            seniority_keywords=(),
+            unwanted_keywords=(),
+            max_years_experience=3,
+            role_max_years_overrides={"data scientist": 1},
+        ),
+    )
+    listings = [JobListing(title="Dev", company="X", location="Tel Aviv",
+                           url="http://x.com/1", description="", source="drushim")]
+    prompt = _build_batch_prompt(listings, cv_text, cfg)
+
+    assert "more than 3 year(s)" in prompt
+    assert "Data Scientist" in prompt
+    assert "more than 1 year(s)" in prompt
 
 
 def test_batch_handles_malformed_response(listing, cv_text, config):
