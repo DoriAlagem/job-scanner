@@ -5,13 +5,15 @@ from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
 from src.matcher import match_batch, QuotaExhausted, _BATCH_SIZE
-from src.scrapers import alljobs, drushim, jobmaster, linkedin
+from src.scrapers import alljobs, drushim, gotfriends, indeed, jobmaster, linkedin
 
 _SCRAPER_BY_SOURCE = {
     "drushim": drushim,
     "jobmaster": jobmaster,
     "alljobs": alljobs,
     "linkedin": linkedin,
+    "gotfriends": gotfriends,
+    "indeed": indeed,
 }
 _ENRICH_DELAY = 0.6  # seconds between job-page fetches to be polite
 
@@ -32,7 +34,7 @@ def run() -> None:
 
     # Scrape all sources independently
     all_listings = []
-    for scraper in (drushim, jobmaster, alljobs, linkedin):
+    for scraper in (drushim, jobmaster, alljobs, linkedin, gotfriends, indeed):
         name = scraper.__name__.split(".")[-1]
         try:
             listings = scraper.scrape()
