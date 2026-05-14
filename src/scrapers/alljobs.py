@@ -74,8 +74,10 @@ def _parse_item(item) -> JobListing | None:
 
     location_el = item.select_one(".job-content-top-location")
     if location_el:
-        location_text = location_el.get_text(strip=True)
+        location_text = location_el.get_text(separator=" ", strip=True)
         location = location_text.replace("מיקום המשרה:", "").replace("מיקום המשרה :", "").strip()
+        if "מספר מקומות" in location:
+            location = "מספר מקומות"
     else:
         location = "Israel"
 

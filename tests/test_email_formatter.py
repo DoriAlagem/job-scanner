@@ -40,7 +40,9 @@ def test_multiple_results_all_appear_in_body():
 
 def test_empty_list_with_no_failures():
     body = format_digest([])
-    assert "0 matching" in body
+    assert "Job Scanner Digest" in body
+    # no-match quip is shown instead of a "0 matching" line
+    assert "0 matching" not in body
 
 
 def test_includes_failure_warning_when_failed_count_set():
