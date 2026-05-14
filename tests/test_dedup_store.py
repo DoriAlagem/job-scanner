@@ -25,9 +25,9 @@ def test_save_and_reload_round_trips(tmp_path):
     assert reloaded.is_seen("https://drushim.co.il/job/123") is True
 
 
-def test_urls_older_than_30_days_are_expired(tmp_path):
+def test_urls_older_than_90_days_are_expired(tmp_path):
     path = tmp_path / "seen_jobs.json"
-    old_ts = (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()
+    old_ts = (datetime.now(timezone.utc) - timedelta(days=91)).isoformat()
     path.write_text(json.dumps({"https://drushim.co.il/job/old": old_ts}))
 
     store = DedupStore(path)

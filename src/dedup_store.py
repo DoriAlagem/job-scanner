@@ -21,7 +21,7 @@ class DedupStore:
 
     def _load(self) -> None:
         data = json.loads(self._path.read_text())
-        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=90)
         self._seen = {
             url: ts
             for url, ts in data.items()
