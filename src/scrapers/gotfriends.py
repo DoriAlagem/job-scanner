@@ -1,7 +1,7 @@
 import logging
-import time
 import requests
 from bs4 import BeautifulSoup
+from src.scrapers.base import scrape_terms
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
@@ -19,20 +19,12 @@ _REQUEST_DELAY = 1.5
 
 
 def scrape() -> list[JobListing]:
-    listings: list[JobListing] = []
-    seen_urls: set[str] = set()
-
-    for term in _SEARCH_TERMS:
-        try:
-            url = f"{_BASE_URL}/jobs/?q={term.replace(' ', '+')}"
-            response = requests.get(url, headers=_HEADERS, timeout=15)
-            response.raise_for_status()
-            listings.extend(_parse_listings(response.text, seen_urls))
-            time.sleep(_REQUEST_DELAY)
-        except Exception as e:
-            logger.warning("gotfriends: failed to scrape %r: %s", term, e)
-
-    return listings
+    return scrape_terms(
+        "gotfriends",
+        lambda term: f"{_BASE_URL}/jobs/?q={term.replace(' ', '+')}",
+        _parse_listings,
+        _SEARCH_TERMS,
+    )
 
 
 def fetch_full_description(url: str) -> str | None:

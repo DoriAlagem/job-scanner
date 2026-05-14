@@ -1,7 +1,8 @@
 import logging
-import time
+from urllib.parse import urlencode
 import requests
 from bs4 import BeautifulSoup
+from src.scrapers.base import scrape_terms
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
@@ -20,24 +21,16 @@ _BASE_URL = "https://il.linkedin.com/jobs/search"
 
 
 def scrape() -> list[JobListing]:
-    listings: list[JobListing] = []
-    seen_urls: set[str] = set()
+    def _build_url(term: str) -> str:
+        return f"{_BASE_URL}?{urlencode({'keywords': term, 'location': 'Israel', 'f_TPR': 'r86400'})}"
 
-    for term in _SEARCH_TERMS:
-        try:
-            params = {
-                "keywords": term,
-                "location": "Israel",
-                "f_TPR": "r86400",
-            }
-            response = requests.get(_BASE_URL, params=params, headers=_HEADERS, timeout=15)
-            response.raise_for_status()
-            listings.extend(_parse_listings(response.text, seen_urls))
-            time.sleep(_REQUEST_DELAY)
-        except Exception as e:
-            logger.warning("linkedin: failed to scrape %r: %s", term, e)
-
-    return listings
+    return scrape_terms(
+        "linkedin",
+        _build_url,
+        _parse_listings,
+        _SEARCH_TERMS,
+        request_delay=_REQUEST_DELAY,
+    )
 
 
 def fetch_full_description(url: str) -> str | None:

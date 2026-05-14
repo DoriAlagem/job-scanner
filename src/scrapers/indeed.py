@@ -1,7 +1,7 @@
 import logging
-import time
 import requests
 from bs4 import BeautifulSoup
+from src.scrapers.base import scrape_terms
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
@@ -21,23 +21,14 @@ _REQUEST_DELAY = 2.0
 
 
 def scrape() -> list[JobListing]:
-    listings: list[JobListing] = []
-    seen_urls: set[str] = set()
-
-    for term in _SEARCH_TERMS:
-        try:
-            url = f"{_BASE_URL}/jobs?q={term.replace(' ', '+')}&l=Israel&fromage=1"
-            response = requests.get(url, headers=_HEADERS, timeout=15)
-            response.raise_for_status()
-            new = _parse_listings(response.text, seen_urls)
-            if not new:
-                logger.debug("indeed: no cards parsed for %r (may be bot-blocked)", term)
-            listings.extend(new)
-            time.sleep(_REQUEST_DELAY)
-        except Exception as e:
-            logger.warning("indeed: failed to scrape %r: %s", term, e)
-
-    return listings
+    return scrape_terms(
+        "indeed",
+        lambda term: f"{_BASE_URL}/jobs?q={term.replace(' ', '+')}&l=Israel&fromage=1",
+        _parse_listings,
+        _SEARCH_TERMS,
+        request_delay=_REQUEST_DELAY,
+        headers=_HEADERS,
+    )
 
 
 def fetch_full_description(url: str) -> str | None:
