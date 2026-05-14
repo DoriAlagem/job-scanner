@@ -4,16 +4,16 @@ import os
 import time
 from dataclasses import dataclass
 
-from google import genai
+from groq import Groq
 
 from src.config_loader import Config
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
 
-# gemini-2.0-flash: available via v1beta, 15 RPM free tier
-_MODEL_NAME = "gemini-2.0-flash"
-_REQUEST_DELAY = 4.5  # seconds between calls — stays safely under 15 RPM
+# Llama 3.1 8B on Groq free tier: 30 RPM, 14400 RPD, fast inference
+_MODEL_NAME = "llama-3.1-8b-instant"
+_REQUEST_DELAY = 2.0  # seconds between calls — stays under 30 RPM
 _MAX_RETRIES = 3
 _RETRY_DELAY = 60  # seconds to wait on 429
 
@@ -34,27 +34,32 @@ def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | No
         logger.debug("Skipping %r — location %r not in configured regions", listing.title, listing.location)
         return None
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    client = genai.Client(api_key=api_key)
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    client = Groq(api_key=api_key)
 
     prompt = _build_prompt(listing, cv_text, config)
     for attempt in range(_MAX_RETRIES):
         try:
-            response = client.models.generate_content(model=_MODEL_NAME, contents=prompt)
+            response = client.chat.completions.create(
+                model=_MODEL_NAME,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+            )
+            text = response.choices[0].message.content
             time.sleep(_REQUEST_DELAY)
-            return _parse_response(response.text, listing)
+            return _parse_response(text, listing)
         except Exception as e:
             err = str(e)
-            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+            if "429" in err or "rate_limit" in err.lower():
                 if attempt < _MAX_RETRIES - 1:
                     logger.warning("matcher: rate limited on %r — waiting %ds (attempt %d/%d)",
                                    listing.title, _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
                     time.sleep(_RETRY_DELAY)
                 else:
                     logger.error("matcher: quota exhausted after %d attempts — stopping run", _MAX_RETRIES)
-                    raise QuotaExhausted("Gemini daily quota exhausted")
+                    raise QuotaExhausted("Groq daily quota exhausted")
             else:
-                logger.warning("matcher: Gemini call failed for %r: %s", listing.title, e)
+                logger.warning("matcher: Groq call failed for %r: %s", listing.title, e)
                 return None
     return None
 

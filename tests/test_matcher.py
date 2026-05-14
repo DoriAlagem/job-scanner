@@ -35,17 +35,18 @@ def cv_text():
     return "Computer Science student with Python, REST APIs, and AWS experience. GPA 95."
 
 
-def _mock_gemini_response(score: int, reasoning: str):
+def _mock_groq_response(score: int, reasoning: str):
     mock_response = MagicMock()
-    mock_response.text = f'{{"score": {score}, "reasoning": "{reasoning}"}}'
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = f'{{"score": {score}, "reasoning": "{reasoning}"}}'
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = mock_response
+    mock_client.chat.completions.create.return_value = mock_response
     return mock_client
 
 
 def test_returns_match_result_with_correct_score_and_reasoning(listing, cv_text, config):
-    mock_client = _mock_gemini_response(85, "Strong Python skills match the role.")
-    with patch("src.matcher.genai.Client", return_value=mock_client):
+    mock_client = _mock_groq_response(85, "Strong Python skills match the role.")
+    with patch("src.matcher.Groq", return_value=mock_client):
         result = match(listing, cv_text, config)
 
     assert isinstance(result, MatchResult)
@@ -76,21 +77,22 @@ def test_keeps_listing_with_unknown_location(cv_text, config):
         description="",
         source="drushim",
     )
-    mock_client = _mock_gemini_response(80, "Good fit.")
-    with patch("src.matcher.genai.Client", return_value=mock_client):
+    mock_client = _mock_groq_response(80, "Good fit.")
+    with patch("src.matcher.Groq", return_value=mock_client):
         result = match(listing, cv_text, config)
 
     assert result is not None
     assert result.score == 80
 
 
-def test_returns_none_on_malformed_gemini_response(listing, cv_text, config):
+def test_returns_none_on_malformed_response(listing, cv_text, config):
     mock_response = MagicMock()
-    mock_response.text = "not valid json at all"
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "not valid json at all"
     mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = mock_response
+    mock_client.chat.completions.create.return_value = mock_response
 
-    with patch("src.matcher.genai.Client", return_value=mock_client):
+    with patch("src.matcher.Groq", return_value=mock_client):
         result = match(listing, cv_text, config)
 
     assert result is None
