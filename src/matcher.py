@@ -11,8 +11,8 @@ from src.models import JobListing
 
 logger = logging.getLogger(__name__)
 
-# gemini-1.5-flash: free tier 15 RPM, 1500 RPD — more reliable than 2.0-flash free tier
-_MODEL_NAME = "gemini-1.5-flash"
+# gemini-2.0-flash: available via v1beta, 15 RPM free tier
+_MODEL_NAME = "gemini-2.0-flash"
 _REQUEST_DELAY = 4.5  # seconds between calls — stays safely under 15 RPM
 _MAX_RETRIES = 3
 _RETRY_DELAY = 60  # seconds to wait on 429
