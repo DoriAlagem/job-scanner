@@ -6,7 +6,7 @@ from src.config_loader import load_config, load_cv_text
 from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
-from src.matcher import match
+from src.matcher import match, QuotaExhausted
 from src.scrapers import alljobs, drushim, jobmaster, linkedin
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -44,12 +44,16 @@ def run() -> None:
     # Match
     results = []
     for listing in new_listings:
-        result = match(listing, cv_text, config)
+        try:
+            result = match(listing, cv_text, config)
+        except QuotaExhausted:
+            logger.warning("Quota exhausted — stopping matching early, sending results found so far")
+            break
         if result is not None and result.score >= config.match_threshold:
             results.append(result)
             store.mark_seen(listing.url)
         elif result is None:
-            # Region-filtered or Gemini failure — still mark as seen to avoid reprocessing
+            # Region-filtered — mark as seen; quota failures bubble up as QuotaExhausted
             store.mark_seen(listing.url)
 
     results.sort(key=lambda r: r.score, reverse=True)
