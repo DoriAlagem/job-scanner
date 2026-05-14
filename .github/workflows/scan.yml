@@ -37,5 +37,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add seen_jobs.json
-          git diff --staged --quiet || git commit -m "chore: update seen_jobs.json [skip ci]"
-          git push
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: update seen_jobs.json [skip ci]"
+          # Retry up to 3 times with rebase in case master moved during the run
+          for i in 1 2 3; do
+            git pull --rebase origin master && git push && exit 0
+            sleep 5
+          done
+          exit 1
