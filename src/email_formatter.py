@@ -1,10 +1,11 @@
 from src.matcher import MatchResult
 
 
-def format_digest(results: list[MatchResult]) -> str:
-    if not results:
-        return "No matching job listings found in this run."
-
+def format_digest(
+    results: list[MatchResult],
+    failed_count: int = 0,
+    quota_exhausted: bool = False,
+) -> str:
     lines = [
         "Job Scanner Digest",
         "=" * 50,
@@ -22,5 +23,12 @@ def format_digest(results: list[MatchResult]) -> str:
             f"   Apply:    {r.listing.url}",
             "",
         ]
+
+    if failed_count > 0 or quota_exhausted:
+        lines.append("-" * 50)
+        if failed_count > 0:
+            lines.append(f"⚠ {failed_count} listing(s) failed to evaluate — they will be retried in the next run.")
+        if quota_exhausted:
+            lines.append("⚠ Daily Groq quota was exhausted before all listings could be evaluated. Remaining listings will be retried in the next run.")
 
     return "\n".join(lines)

@@ -38,6 +38,16 @@ def test_multiple_results_all_appear_in_body():
     assert "https://example.com/job/2" in body
 
 
-def test_empty_list_returns_no_matches_message():
+def test_empty_list_with_no_failures():
     body = format_digest([])
-    assert "No matching" in body
+    assert "0 matching" in body
+
+
+def test_includes_failure_warning_when_failed_count_set():
+    body = format_digest([], failed_count=5)
+    assert "5 listing(s) failed to evaluate" in body
+
+
+def test_includes_quota_warning_when_exhausted():
+    body = format_digest([], quota_exhausted=True)
+    assert "quota was exhausted" in body

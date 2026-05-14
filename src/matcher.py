@@ -11,15 +11,16 @@ from src.models import JobListing
 
 logger = logging.getLogger(__name__)
 
-# Llama 3.1 8B on Groq free tier: 30 RPM, 14400 RPD, fast inference
+# Llama 3.1 8B on Groq free tier: 30 RPM, 14400 RPD, 6000 TPM
 _MODEL_NAME = "llama-3.1-8b-instant"
-_REQUEST_DELAY = 2.0  # seconds between calls — stays under 30 RPM
+_REQUEST_DELAY = 2.0
 _MAX_RETRIES = 3
-_RETRY_DELAY = 60  # seconds to wait on 429
+_RETRY_DELAY = 60
+_BATCH_SIZE = 10
 
 
 class QuotaExhausted(Exception):
-    """Raised when Gemini daily quota is exhausted — caller should stop and send results so far."""
+    """Raised when daily quota is exhausted — caller should stop and send results so far."""
 
 
 @dataclass
@@ -27,6 +28,14 @@ class MatchResult:
     listing: JobListing
     score: int
     reasoning: str
+
+
+@dataclass
+class BatchOutcome:
+    """Result of scoring a batch. `results` holds successful matches keyed by listing index;
+    missing indices mean that listing failed to evaluate and should NOT be marked as seen."""
+    results: dict[int, MatchResult]
+    failed_listings: list[JobListing]
 
 
 _SENIORITY_KEYWORDS = (
@@ -41,19 +50,42 @@ def _passes_title_filter(listing: JobListing) -> bool:
     return not any(kw in title for kw in _SENIORITY_KEYWORDS)
 
 
-def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | None:
-    if not _passes_region_filter(listing, config):
-        logger.debug("Skipping %r — location %r not in configured regions", listing.title, listing.location)
-        return None
+def _passes_region_filter(listing: JobListing, config: Config) -> bool:
+    loc = listing.location.strip().lower()
+    if not loc or loc in ("israel", "unknown", ""):
+        return True
+    return any(region.lower() in loc or loc in region.lower() for region in config.regions)
 
+
+def _prefilter(listing: JobListing, config: Config) -> bool:
+    """Returns True if listing should be sent to the LLM, False to skip."""
+    if not _passes_region_filter(listing, config):
+        return False
     if not _passes_title_filter(listing):
-        logger.debug("Skipping %r — seniority keyword in title", listing.title)
-        return None
+        return False
+    return True
+
+
+def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> BatchOutcome:
+    """Score a batch of listings in one Groq call. Returns BatchOutcome with successful results
+    keyed by listing index and a list of listings that failed to evaluate."""
+    # Apply pre-filters first — filtered listings are treated as "scored 0", marked seen
+    filtered_results: dict[int, MatchResult] = {}
+    to_evaluate: list[tuple[int, JobListing]] = []
+    for i, listing in enumerate(listings):
+        if _prefilter(listing, config):
+            to_evaluate.append((i, listing))
+        else:
+            # Pre-filter rejection — still "evaluated" with score 0, mark as seen
+            filtered_results[i] = MatchResult(listing=listing, score=0, reasoning="Pre-filtered (region/seniority)")
+
+    if not to_evaluate:
+        return BatchOutcome(results=filtered_results, failed_listings=[])
 
     api_key = os.environ.get("GROQ_API_KEY", "")
     client = Groq(api_key=api_key)
+    prompt = _build_batch_prompt([l for _, l in to_evaluate], cv_text, config)
 
-    prompt = _build_prompt(listing, cv_text, config)
     for attempt in range(_MAX_RETRIES):
         try:
             response = client.chat.completions.create(
@@ -63,73 +95,73 @@ def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | No
             )
             text = response.choices[0].message.content
             time.sleep(_REQUEST_DELAY)
-            return _parse_response(text, listing)
+            parsed = _parse_batch_response(text, [l for _, l in to_evaluate])
+            if parsed is None:
+                # Parse failed entirely — all listings in batch are failures
+                return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
+            # Merge LLM results into final dict
+            for (original_idx, _listing), result in zip(to_evaluate, parsed):
+                if result is not None:
+                    filtered_results[original_idx] = result
+            # Identify per-listing failures (some entries in `parsed` may be None)
+            failed = [l for (_, l), r in zip(to_evaluate, parsed) if r is None]
+            return BatchOutcome(results=filtered_results, failed_listings=failed)
         except Exception as e:
             err = str(e)
             if "429" in err or "rate_limit" in err.lower():
                 if attempt < _MAX_RETRIES - 1:
-                    logger.warning("matcher: rate limited on %r — waiting %ds (attempt %d/%d)",
-                                   listing.title, _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
+                    logger.warning("matcher: rate limited on batch — waiting %ds (attempt %d/%d)",
+                                   _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
                     time.sleep(_RETRY_DELAY)
                 else:
                     logger.error("matcher: quota exhausted after %d attempts — stopping run", _MAX_RETRIES)
                     raise QuotaExhausted("Groq daily quota exhausted")
             else:
-                logger.warning("matcher: Groq call failed for %r: %s", listing.title, e)
-                return None
-    return None
+                logger.warning("matcher: Groq batch call failed: %s", e)
+                return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
+
+    return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
 
 
-def _passes_region_filter(listing: JobListing, config: Config) -> bool:
-    loc = listing.location.strip().lower()
-    if not loc or loc in ("israel", "unknown", ""):
-        return True
-    return any(region.lower() in loc or loc in region.lower() for region in config.regions)
+def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
+    jobs_block = "\n\n".join(
+        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:600]}"
+        for i, l in enumerate(listings)
+    )
+    return f"""You are a strict job-fit evaluator for a junior CS candidate. Score each job 0-100. Be conservative — default LOW. Threshold for emailing is {config.match_threshold}.
 
+## Candidate
+Junior, 0-2 years professional experience. 3rd-year CS student.
+Skills (from CV): Python, C, C++, SQL, REST APIs, distributed systems, MQTT, NumPy, Pandas, Scikit-learn, AWS, Git, basic ML.
 
-def _build_prompt(listing: JobListing, cv_text: str, config: Config) -> str:
-    return f"""You are a strict job-fit evaluator for a junior Computer Science candidate. Be conservative — default to LOW scores unless the role is clearly a good fit. The email threshold is {config.match_threshold}; only listings genuinely worth applying to should reach it.
-
-## Candidate profile
-- Junior, 0–2 years of professional experience. Currently a 3rd-year CS student.
-- Demonstrated skills (from CV): Python, C, C++, SQL, REST APIs, distributed systems, MQTT, automation workflows, NumPy, Pandas, Scikit-learn, AWS, Git, basic machine learning (academic).
-
-## Candidate CV (full text)
+## CV
 {cv_text}
 
-## Job listing
-Title: {listing.title}
-Company: {listing.company}
-Location: {listing.location}
-Description: {listing.description}
+## Hard deal-breakers (score 0)
+1. Listing explicitly requires 3+ years of experience.
+2. Senior / lead / principal / head-of role (Hebrew: בכיר, ראש צוות).
+3. Hardware IT support (PC tech, desktop tech, hardware repair). Only L1 helpdesk OK.
+4. PRIMARY required skill is one the candidate has zero exposure to (e.g. Go, RPG, .NET).
 
-## Hard deal-breakers (score 0 if ANY apply)
-1. Listing explicitly requires 3 or more years of experience (e.g. "3+ years", "5 years required", "must have 7 years").
-2. Title or description describes a senior, lead, principal, or head-of role (Hebrew: בכיר, ראש צוות).
-3. The role is hardware-focused IT support — PC technician, desktop technician, hardware repair, field technician. ONLY L1 helpdesk / user-facing software support is acceptable for IT-support-type roles.
-4. A required PRIMARY skill is one the candidate has zero exposure to — e.g. "Go Developer" with no Go, "RPG Developer" with no RPG, ".NET" role with no .NET, "React Native" as primary stack with no React. (Don't penalize for missing secondary / nice-to-have skills — see soft rules below.)
+## Soft rules
+- Most (not all) primary skills should overlap. Missing secondary skills → reduce moderately.
+- PM / customer-facing engineering OK if skills align.
+- Marketing / sales / finance → very low.
 
-## Soft rules (use judgment, don't auto-reject)
-- The candidate should have MOST of the role's required primary skills, not all.
-- Weigh each missing skill by how critical it is to the role:
-  - Missing a CENTRAL skill (the role is named after it / it's the main daily tool) → score very low.
-  - Missing SECONDARY skills (one of many bullets, nice-to-have, "experience with X is a plus") → reduce score moderately, don't reject.
-- Project manager, technical PM, customer-facing engineering roles ARE acceptable if the listed required skills overlap with the candidate's skills.
-- Roles outside core software (e.g. marketing, finance, sales) → score very low.
-- Default to lower scores when uncertain — prefer false negatives over false positives.
+## Jobs to score
+{jobs_block}
 
 ## Output
-Return ONLY a JSON object with two fields:
-- "score": integer 0-100
-- "reasoning": one English sentence explaining the score, mentioning the most decisive factor (experience cap, missing central skill, strong skill alignment, etc.)
+Return a JSON object with ONE field "results", an array of EXACTLY {len(listings)} objects in the same order as the jobs above. Each object has "score" (int 0-100) and "reasoning" (one English sentence).
 
-Example of a good fit: {{"score": 82, "reasoning": "Python backend role requiring 0-2 years and REST/AWS skills directly demonstrated in the candidate's CV."}}
-Example of a bad fit: {{"score": 10, "reasoning": "Role requires 5+ years of professional Go experience; candidate is junior with no Go on the CV."}}
+Example: {{"results": [{{"score": 82, "reasoning": "..."}}, {{"score": 10, "reasoning": "..."}}, ...]}}
 
 JSON:"""
 
 
-def _parse_response(text: str, listing: JobListing) -> MatchResult | None:
+def _parse_batch_response(text: str, listings: list[JobListing]) -> list[MatchResult | None] | None:
+    """Parse a batch response. Returns a list aligned with `listings` (None for items that failed to parse).
+    Returns None if the entire response is unparseable."""
     try:
         text = text.strip()
         if text.startswith("```"):
@@ -137,11 +169,33 @@ def _parse_response(text: str, listing: JobListing) -> MatchResult | None:
             if text.startswith("json"):
                 text = text[4:]
         data = json.loads(text)
-        score = int(data["score"])
-        reasoning = str(data["reasoning"])
-        if not 0 <= score <= 100:
-            raise ValueError(f"Score out of range: {score}")
-        return MatchResult(listing=listing, score=score, reasoning=reasoning)
+        items = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(items, list):
+            logger.warning("matcher: batch response missing 'results' array: %r", text[:200])
+            return None
+
+        results: list[MatchResult | None] = []
+        for listing, item in zip(listings, items):
+            try:
+                score = int(item["score"])
+                reasoning = str(item["reasoning"])
+                if not 0 <= score <= 100:
+                    raise ValueError(f"score out of range: {score}")
+                results.append(MatchResult(listing=listing, score=score, reasoning=reasoning))
+            except Exception as e:
+                logger.warning("matcher: failed to parse batch entry for %r: %s", listing.title, e)
+                results.append(None)
+
+        # If returned array is shorter than listings, pad with None
+        while len(results) < len(listings):
+            results.append(None)
+        return results
     except Exception as e:
-        logger.warning("matcher: failed to parse Gemini response %r: %s", text[:100], e)
+        logger.warning("matcher: failed to parse batch response %r: %s", text[:200], e)
         return None
+
+
+# Backwards-compatible single-listing match (used by tests, not by orchestrator)
+def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | None:
+    outcome = match_batch([listing], cv_text, config)
+    return outcome.results.get(0)

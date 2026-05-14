@@ -1,12 +1,9 @@
 import logging
-import sys
-from pathlib import Path
-
 from src.config_loader import load_config, load_cv_text
 from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
-from src.matcher import match, QuotaExhausted
+from src.matcher import match_batch, QuotaExhausted, _BATCH_SIZE
 from src.scrapers import alljobs, drushim, jobmaster, linkedin
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -41,32 +38,42 @@ def run() -> None:
     new_listings = [l for l in all_listings if not store.is_seen(l.url)]
     logger.info("New listings after dedup: %d", len(new_listings))
 
-    # Match
+    # Match in batches
     results = []
-    for listing in new_listings:
+    total_failed = 0
+    quota_exhausted = False
+    for i in range(0, len(new_listings), _BATCH_SIZE):
+        batch = new_listings[i:i + _BATCH_SIZE]
         try:
-            result = match(listing, cv_text, config)
+            outcome = match_batch(batch, cv_text, config)
         except QuotaExhausted:
             logger.warning("Quota exhausted — stopping matching early, sending results found so far")
+            quota_exhausted = True
             break
-        if result is not None and result.score >= config.match_threshold:
-            results.append(result)
-            store.mark_seen(listing.url)
-        elif result is None:
-            # Region-filtered — mark as seen; quota failures bubble up as QuotaExhausted
-            store.mark_seen(listing.url)
+
+        # Mark successfully-evaluated listings as seen; collect matches above threshold
+        for j, result in outcome.results.items():
+            store.mark_seen(result.listing.url)
+            if result.score >= config.match_threshold:
+                results.append(result)
+
+        # Listings that failed to evaluate are NOT marked seen — will be retried next run
+        total_failed += len(outcome.failed_listings)
+        for failed in outcome.failed_listings:
+            logger.warning("Failed to evaluate: %r (%s)", failed.title, failed.source)
 
     results.sort(key=lambda r: r.score, reverse=True)
-    logger.info("Matching listings (score >= %d): %d", config.match_threshold, len(results))
+    logger.info("Matching listings (score >= %d): %d, failed to evaluate: %d",
+                config.match_threshold, len(results), total_failed)
 
     # Send digest
-    if results:
-        body = format_digest(results)
+    if results or total_failed > 0:
+        body = format_digest(results, failed_count=total_failed, quota_exhausted=quota_exhausted)
         subject = f"Job Scanner: {len(results)} new match(es) found"
         send(subject, body, config.email_to)
         logger.info("Digest email sent with %d listings", len(results))
     else:
-        logger.info("No matches above threshold — no email sent")
+        logger.info("No matches above threshold and no failures — no email sent")
 
     # Persist seen jobs
     store.save()
