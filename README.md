@@ -1,6 +1,6 @@
 # Job Scanner
 
-Automated job scanner for the Israeli market. Runs twice daily, scrapes major job boards, scores listings against your CV using Gemini, and emails you the matches.
+Automated job scanner for the Israeli market. Runs twice daily, scrapes major job boards, scores listings against your CV using Groq (Llama 3.1), and emails you the matches.
 
 ## How it works
 
