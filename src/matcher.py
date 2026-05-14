@@ -174,41 +174,34 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
 
 def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
     jobs_block = "\n\n".join(
-        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:600]}"
+        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:800]}"
         for i, l in enumerate(listings)
     )
-    return f"""You are a strict job-fit evaluator for a junior CS candidate. Score each job 0-100. Be conservative — default LOW. Threshold for emailing is {config.match_threshold}.
+    return f"""You are evaluating job listings for a JUNIOR candidate (0-2 years experience, 3rd-year CS student).
 
-## Candidate
-Junior, 0-2 years professional experience. 3rd-year CS student.
-Skills (from CV): Python, C, C++, SQL, REST APIs, distributed systems, MQTT, NumPy, Pandas, Scikit-learn, AWS, Git, basic ML.
+RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
+Score EXACTLY 0 if the listing mentions ANY of: 3+ years, 4+ years, 5+ years, senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. This is the most important rule — enforce it every time, no exceptions.
+
+If experience level is not mentioned, the job is eligible — continue scoring.
+
+RULE #2 — ROLE FIT:
+Wanted roles: software engineer, backend, Python, DevOps, QA, automation, data engineer, ML, cloud, infrastructure, IoT, embedded systems, IT support (L1 helpdesk only — NOT hardware repair or PC technician).
+Unwanted: full-stack, UI/UX, economics, freelance, coordinator, מתאם.
+
+RULE #3 — SKILLS:
+Candidate skills: Python, C, C++, SQL, REST APIs, distributed systems, MQTT, NumPy, Pandas, Scikit-learn, AWS, Git, basic ML.
+Score high (70-90) if most primary required skills match. Score low if a skill central to the role is completely absent. Missing secondary/nice-to-have skills → reduce moderately, don't reject.
 
 ## CV
 {cv_text}
-
-## Hard deal-breakers (score 0)
-1. Listing explicitly requires 3+ years of experience.
-2. Senior / lead / principal / head-of role (Hebrew: בכיר, ראש צוות).
-3. Hardware IT support (PC tech, desktop tech, hardware repair). Only L1 helpdesk OK.
-4. PRIMARY required skill is one the candidate has zero exposure to (e.g. Go, RPG, .NET).
-5. Full-stack development role (frontend + backend mix). Backend-only is fine.
-6. UI / UX designer role (not wanted).
-7. Economics / accounting / finance role (כלכלן, רואה חשבון, חשב — not wanted).
-8. Freelance / contract / part-time consulting (פרילנס — not wanted; permanent only).
-9. Non-technical coordinator / appointment-setter / scheduling role (מתאם פגישות — not wanted).
-
-## Soft rules
-- Most (not all) primary skills should overlap. Missing secondary skills → reduce moderately.
-- PM / customer-facing engineering OK if skills align.
-- Marketing / sales / finance → very low.
 
 ## Jobs to score
 {jobs_block}
 
 ## Output
-Return a JSON object with ONE field "results", an array of EXACTLY {len(listings)} objects in the same order as the jobs above. Each object has "score" (int 0-100) and "reasoning" (one English sentence).
+Return a JSON object with ONE field "results", an array of EXACTLY {len(listings)} objects in order. Each: "score" (int 0-100) and "reasoning" (one sentence stating experience requirement found, or "no experience requirement mentioned" if absent).
 
-Example: {{"results": [{{"score": 82, "reasoning": "..."}}, {{"score": 10, "reasoning": "..."}}, ...]}}
+{{"results": [{{"score": 0, "reasoning": "Requires 5 years of experience."}}, {{"score": 75, "reasoning": "No experience requirement mentioned; Python and REST API skills match well."}}, ...]}}
 
 JSON:"""
 
