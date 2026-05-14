@@ -5,6 +5,7 @@ from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
 from src.matcher import match_batch, QuotaExhausted, _BATCH_SIZE
+from src.models import JobListing
 from src.scrapers import alljobs, drushim, gotfriends, indeed, jobmaster, linkedin
 
 _SCRAPER_BY_SOURCE = {
@@ -15,7 +16,7 @@ _SCRAPER_BY_SOURCE = {
     "gotfriends": gotfriends,
     "indeed": indeed,
 }
-_ENRICH_DELAY = 0.6  # seconds between job-page fetches to be polite
+_ENRICH_DELAY = 0.6
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -25,16 +26,10 @@ _CV_PATH = "Dor_Alagem_CV.pdf"
 _SEEN_JOBS_PATH = "seen_jobs.json"
 
 
-def run() -> None:
-    logger.info("Job scanner run starting")
-
-    config = load_config(_CONFIG_PATH)
-    cv_text = load_cv_text(_CV_PATH)
-    store = DedupStore(_SEEN_JOBS_PATH)
-
-    # Scrape all sources independently
-    all_listings = []
-    for scraper in (drushim, jobmaster, alljobs, linkedin, gotfriends, indeed):
+def _scrape_all(scrapers) -> list[JobListing]:
+    """Run each scraper independently; log counts; swallow per-scraper failures."""
+    all_listings: list[JobListing] = []
+    for scraper in scrapers:
         name = scraper.__name__.split(".")[-1]
         try:
             listings = scraper.scrape()
@@ -42,30 +37,46 @@ def run() -> None:
             all_listings.extend(listings)
         except Exception as e:
             logger.warning("%s: scraper failed: %s", name, e)
+    return all_listings
 
-    logger.info("Total listings before dedup: %d", len(all_listings))
 
-    # Deduplicate
-    new_listings = [l for l in all_listings if not store.is_seen(l.url)]
-    logger.info("New listings after dedup: %d", len(new_listings))
-
-    # Enrich each listing with its full description from the job page.
-    # The short scraped snippets often miss the requirements section.
-    enriched_count = 0
-    for listing in new_listings:
-        scraper = _SCRAPER_BY_SOURCE.get(listing.source)
+def _enrich(listings: list[JobListing], scraper_by_source: dict, delay: float = _ENRICH_DELAY) -> int:
+    """Fetch full job-page descriptions in-place; return count of listings enriched."""
+    enriched = 0
+    for listing in listings:
+        scraper = scraper_by_source.get(listing.source)
         if scraper and hasattr(scraper, "fetch_full_description"):
             try:
                 full = scraper.fetch_full_description(listing.url)
                 if full and len(full) > len(listing.description):
                     listing.description = full
-                    enriched_count += 1
+                    enriched += 1
             except Exception as e:
                 logger.debug("enrich failed for %s: %s", listing.url, e)
-            time.sleep(_ENRICH_DELAY)
+            time.sleep(delay)
+    return enriched
+
+
+def run(
+    config_path: str = _CONFIG_PATH,
+    cv_path: str = _CV_PATH,
+    seen_path: str = _SEEN_JOBS_PATH,
+) -> None:
+    logger.info("Job scanner run starting")
+
+    config = load_config(config_path)
+    cv_text = load_cv_text(cv_path)
+    store = DedupStore(seen_path)
+
+    all_listings = _scrape_all((drushim, jobmaster, alljobs, linkedin, gotfriends, indeed))
+    logger.info("Total listings before dedup: %d", len(all_listings))
+
+    new_listings = [l for l in all_listings if not store.is_seen(l.url)]
+    logger.info("New listings after dedup: %d", len(new_listings))
+
+    enriched_count = _enrich(new_listings, _SCRAPER_BY_SOURCE)
     logger.info("Enriched %d/%d listings with full descriptions", enriched_count, len(new_listings))
 
-    # Match in batches
     results = []
     total_failed = 0
     quota_exhausted = False
@@ -78,13 +89,11 @@ def run() -> None:
             quota_exhausted = True
             break
 
-        # Mark successfully-evaluated listings as seen; collect matches above threshold
         for j, result in outcome.results.items():
             store.mark_seen(result.listing.url)
             if result.score >= config.match_threshold:
                 results.append(result)
 
-        # Listings that failed to evaluate are NOT marked seen — will be retried next run
         total_failed += len(outcome.failed_listings)
         for failed in outcome.failed_listings:
             logger.warning("Failed to evaluate: %r (%s)", failed.title, failed.source)
@@ -93,7 +102,6 @@ def run() -> None:
     logger.info("Matching listings (score >= %d): %d, failed to evaluate: %d",
                 config.match_threshold, len(results), total_failed)
 
-    # Send digest
     if results or total_failed > 0:
         body = format_digest(results, failed_count=total_failed, quota_exhausted=quota_exhausted)
         subject = f"Job Scanner: {len(results)} new match(es) found"
@@ -102,7 +110,6 @@ def run() -> None:
     else:
         logger.info("No matches above threshold and no failures — no email sent")
 
-    # Persist seen jobs
     store.save()
     logger.info("seen_jobs.json updated")
 

@@ -9,7 +9,7 @@ _SMTP_HOST = "smtp.gmail.com"
 _SMTP_PORT = 587
 
 
-def send(subject: str, body: str, to: str) -> None:
+def send(subject: str, body: str, to: str, *, _smtp_cls=smtplib.SMTP) -> None:
     gmail_from = os.environ["GMAIL_FROM"]
     app_password = os.environ["GMAIL_APP_PASSWORD"]
 
@@ -18,7 +18,7 @@ def send(subject: str, body: str, to: str) -> None:
     msg["From"] = gmail_from
     msg["To"] = to
 
-    with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT) as server:
+    with _smtp_cls(_SMTP_HOST, _SMTP_PORT) as server:
         server.starttls()
         server.login(gmail_from, app_password)
         server.sendmail(gmail_from, [to], msg.as_string())
