@@ -18,6 +18,10 @@ _MAX_RETRIES = 3
 _RETRY_DELAY = 60  # seconds to wait on 429
 
 
+class QuotaExhausted(Exception):
+    """Raised when Gemini daily quota is exhausted — caller should stop and send results so far."""
+
+
 @dataclass
 class MatchResult:
     listing: JobListing
@@ -42,13 +46,16 @@ def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | No
         except Exception as e:
             err = str(e)
             if "429" in err or "RESOURCE_EXHAUSTED" in err:
-                logger.warning("matcher: rate limited on %r — waiting %ds (attempt %d/%d)",
-                               listing.title, _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
-                time.sleep(_RETRY_DELAY)
+                if attempt < _MAX_RETRIES - 1:
+                    logger.warning("matcher: rate limited on %r — waiting %ds (attempt %d/%d)",
+                                   listing.title, _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
+                    time.sleep(_RETRY_DELAY)
+                else:
+                    logger.error("matcher: quota exhausted after %d attempts — stopping run", _MAX_RETRIES)
+                    raise QuotaExhausted("Gemini daily quota exhausted")
             else:
                 logger.warning("matcher: Gemini call failed for %r: %s", listing.title, e)
                 return None
-    logger.warning("matcher: giving up on %r after %d attempts", listing.title, _MAX_RETRIES)
     return None
 
 
