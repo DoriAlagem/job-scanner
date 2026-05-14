@@ -16,13 +16,13 @@ _HEADERS = {
 }
 _SEARCH_TERMS = ["python developer", "software engineer", "devops", "qa automation", "backend developer", "data engineer"]
 _REQUEST_DELAY = 2.0
-# f_TPR=r7776000 = posted in last 90 days; dedup prevents re-sending seen jobs
+# f_TPR=r2592000 = posted in last 30 days; dedup prevents re-sending seen jobs
 _BASE_URL = "https://il.linkedin.com/jobs/search"
 
 
 def scrape() -> list[JobListing]:
     def _build_url(term: str) -> str:
-        return f"{_BASE_URL}?{urlencode({'keywords': term, 'location': 'Israel', 'f_TPR': 'r7776000'})}"
+        return f"{_BASE_URL}?{urlencode({'keywords': term, 'location': 'Israel', 'f_TPR': 'r2592000'})}"
 
     return scrape_terms(
         "linkedin",

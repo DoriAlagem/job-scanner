@@ -113,3 +113,5 @@ filters:
     - "appointment setter"
     - "scheduling coordinator"
   max_years_experience: 2
+  role_max_years_overrides:
+    data engineer: 1
