@@ -136,6 +136,34 @@ def test_hebrew_senior_title_rejected(cv_text, config):
     mock_client.chat.completions.create.assert_not_called()
 
 
+def test_unwanted_title_keywords_rejected(cv_text, config):
+    """Full Stack, UI/UX, Economist, Freelance, מתאם פגישות should all be pre-filtered."""
+    unwanted_titles = [
+        "Full Stack Developer",
+        "Fullstack Engineer",
+        "UI/UX Designer",
+        "UX Researcher",
+        "Senior Economist",  # also has senior, both should fire
+        "Freelance Python Developer",
+        "מתאם פגישות לחברת הייטק",
+    ]
+    mock_client = MagicMock()
+    for title in unwanted_titles:
+        listing = JobListing(
+            title=title,
+            company="Acme",
+            location="Tel Aviv",
+            url=f"https://x.com/{title}",
+            description="",
+            source="drushim",
+        )
+        with patch("src.matcher.Groq", return_value=mock_client):
+            result = match(listing, cv_text, config)
+        assert result is not None, f"{title} should return a pre-filter result"
+        assert result.score == 0, f"{title} should be score 0 but got {result.score}"
+    mock_client.chat.completions.create.assert_not_called()
+
+
 def test_manager_title_passes_filter(cv_text, config):
     listing = JobListing(
         title="Project Manager",
