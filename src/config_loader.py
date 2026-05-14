@@ -9,6 +9,11 @@ class FilterConfig:
     seniority_keywords: tuple[str, ...]
     unwanted_keywords: tuple[str, ...]
     max_years_experience: int
+    role_max_years_overrides: dict[str, int] = None
+
+    def __post_init__(self):
+        if self.role_max_years_overrides is None:
+            self.role_max_years_overrides = {}
 
 
 @dataclass
@@ -41,6 +46,7 @@ def load_config(config_path: str = "config.yaml") -> Config:
         seniority_keywords=tuple(f.get("seniority_keywords", [])),
         unwanted_keywords=tuple(f.get("unwanted_keywords", [])),
         max_years_experience=int(f.get("max_years_experience", 2)),
+        role_max_years_overrides={k.lower(): int(v) for k, v in f.get("role_max_years_overrides", {}).items()},
     )
 
     return Config(

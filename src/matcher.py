@@ -46,6 +46,7 @@ _YEARS_PATTERNS = [
     re.compile(r"(?:minimum|at least|min\.?|over)\s+(\d+)\s*years?", re.IGNORECASE),
     re.compile(r"(\d+)\s*years?\s+(?:of\s+)?(?:experience|exp\.?|professional)", re.IGNORECASE),
     re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)"),
+    re.compile(r"(\d+)\s*[-–]\s*\d+\s*שנ(?:ות|ים|ה)"),  # Hebrew range: "4-6 שנות"
 ]
 
 
@@ -60,12 +61,19 @@ def _passes_title_filter(listing: JobListing, config: Config) -> bool:
 
 def _passes_experience_filter(listing: JobListing, config: Config) -> bool:
     """Return False if the description explicitly requires more experience than the candidate has."""
+    title_lower = listing.title.lower()
+    max_years = config.filters.max_years_experience
+    for role, override in config.filters.role_max_years_overrides.items():
+        if role in title_lower:
+            max_years = override
+            break
+
     text = f"{listing.title} {listing.description}"
     for pattern in _YEARS_PATTERNS:
         for match in pattern.finditer(text):
             try:
                 years = int(match.group(1))
-                if years > config.filters.max_years_experience:
+                if years > max_years:
                     return False
             except (ValueError, IndexError):
                 continue
@@ -149,13 +157,15 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
 
 def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
     jobs_block = "\n\n".join(
-        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:800]}"
+        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:1500]}"
         for i, l in enumerate(listings)
     )
     return f"""You are evaluating job listings for a JUNIOR candidate (0-2 years experience, 3rd-year CS student).
 
 RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
-Score EXACTLY 0 if the listing mentions ANY of: 3+ years, 4+ years, 5+ years, senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. This is the most important rule — enforce it every time, no exceptions.
+Score EXACTLY 0 if the listing mentions ANY of: 3+ years, 4+ years, 5+ years, senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. This includes ranges like "4-6 years" or "3-5 שנות". This is the most important rule — enforce it every time, no exceptions.
+
+DATA ENGINEER EXCEPTION: For Data Engineer roles specifically, score EXACTLY 0 if the listing requires more than 1 year of experience. Apply this before all other rules.
 
 If experience level is not mentioned, the job is eligible — continue scoring.
 
