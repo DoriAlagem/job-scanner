@@ -52,6 +52,23 @@ def _parse_listings(html: str, seen_urls: set[str]) -> list[JobListing]:
     return results
 
 
+def fetch_full_description(url: str) -> str | None:
+    try:
+        response = requests.get(url, headers=_HEADERS, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        full_text = soup.get_text(separator=" ", strip=True)
+        # Cut starting from "דרישות" (requirements) or "תיאור" (description) marker
+        for marker in ["דרישות", "תיאור משרה", "תיאור"]:
+            idx = full_text.find(marker)
+            if idx > 0:
+                return full_text[idx:idx + 4000]
+        return None
+    except Exception as e:
+        logger.debug("drushim: failed to fetch full description for %s: %s", url, e)
+        return None
+
+
 def _parse_item(item) -> JobListing | None:
     title_el = item.select_one("h3 .job-url")
     if not title_el:
