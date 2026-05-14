@@ -29,9 +29,25 @@ class MatchResult:
     reasoning: str
 
 
+_SENIORITY_KEYWORDS = (
+    " senior", "senior ", "sr.", " sr ", " lead ", "team lead", "tech lead",
+    "principal", "head of", " chief", "vp ", " director",
+    "בכיר", "ראש צוות", " ראש ",
+)
+
+
+def _passes_title_filter(listing: JobListing) -> bool:
+    title = f" {listing.title.lower()} "
+    return not any(kw in title for kw in _SENIORITY_KEYWORDS)
+
+
 def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | None:
     if not _passes_region_filter(listing, config):
         logger.debug("Skipping %r — location %r not in configured regions", listing.title, listing.location)
+        return None
+
+    if not _passes_title_filter(listing):
+        logger.debug("Skipping %r — seniority keyword in title", listing.title)
         return None
 
     api_key = os.environ.get("GROQ_API_KEY", "")
@@ -72,27 +88,43 @@ def _passes_region_filter(listing: JobListing, config: Config) -> bool:
 
 
 def _build_prompt(listing: JobListing, cv_text: str, config: Config) -> str:
-    return f"""You are evaluating a job listing for a candidate. Score how well the candidate fits the role.
+    return f"""You are a strict job-fit evaluator for a junior Computer Science candidate. Be conservative — default to LOW scores unless the role is clearly a good fit. The email threshold is {config.match_threshold}; only listings genuinely worth applying to should reach it.
 
-## Candidate CV
+## Candidate profile
+- Junior, 0–2 years of professional experience. Currently a 3rd-year CS student.
+- Demonstrated skills (from CV): Python, C, C++, SQL, REST APIs, distributed systems, MQTT, automation workflows, NumPy, Pandas, Scikit-learn, AWS, Git, basic machine learning (academic).
+
+## Candidate CV (full text)
 {cv_text}
 
-## Job Listing
+## Job listing
 Title: {listing.title}
 Company: {listing.company}
 Location: {listing.location}
 Description: {listing.description}
 
-## Candidate Preferences
-Target roles: {", ".join(config.roles)}
-Experience levels accepted: {", ".join(config.experience_levels)}
+## Hard deal-breakers (score 0 if ANY apply)
+1. Listing explicitly requires 3 or more years of experience (e.g. "3+ years", "5 years required", "must have 7 years").
+2. Title or description describes a senior, lead, principal, or head-of role (Hebrew: בכיר, ראש צוות).
+3. The role is hardware-focused IT support — PC technician, desktop technician, hardware repair, field technician. ONLY L1 helpdesk / user-facing software support is acceptable for IT-support-type roles.
+4. A required PRIMARY skill is one the candidate has zero exposure to — e.g. "Go Developer" with no Go, "RPG Developer" with no RPG, ".NET" role with no .NET, "React Native" as primary stack with no React. (Don't penalize for missing secondary / nice-to-have skills — see soft rules below.)
 
-## Instructions
+## Soft rules (use judgment, don't auto-reject)
+- The candidate should have MOST of the role's required primary skills, not all.
+- Weigh each missing skill by how critical it is to the role:
+  - Missing a CENTRAL skill (the role is named after it / it's the main daily tool) → score very low.
+  - Missing SECONDARY skills (one of many bullets, nice-to-have, "experience with X is a plus") → reduce score moderately, don't reject.
+- Project manager, technical PM, customer-facing engineering roles ARE acceptable if the listed required skills overlap with the candidate's skills.
+- Roles outside core software (e.g. marketing, finance, sales) → score very low.
+- Default to lower scores when uncertain — prefer false negatives over false positives.
+
+## Output
 Return ONLY a JSON object with two fields:
-- "score": integer 0-100 representing how well the candidate fits this role
-- "reasoning": one English sentence explaining the score
+- "score": integer 0-100
+- "reasoning": one English sentence explaining the score, mentioning the most decisive factor (experience cap, missing central skill, strong skill alignment, etc.)
 
-Example: {{"score": 82, "reasoning": "Strong Python and REST API experience directly matches the role requirements."}}
+Example of a good fit: {{"score": 82, "reasoning": "Python backend role requiring 0-2 years and REST/AWS skills directly demonstrated in the candidate's CV."}}
+Example of a bad fit: {{"score": 10, "reasoning": "Role requires 5+ years of professional Go experience; candidate is junior with no Go on the CV."}}
 
 JSON:"""
 

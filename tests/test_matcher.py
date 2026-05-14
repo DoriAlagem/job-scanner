@@ -85,6 +85,57 @@ def test_keeps_listing_with_unknown_location(cv_text, config):
     assert result.score == 80
 
 
+def test_senior_title_rejected_without_llm_call(cv_text, config):
+    listing = JobListing(
+        title="Senior Software Engineer",
+        company="Acme",
+        location="Tel Aviv",
+        url="https://drushim.co.il/job/senior-1",
+        description="",
+        source="drushim",
+    )
+    mock_client = MagicMock()
+    with patch("src.matcher.Groq", return_value=mock_client):
+        result = match(listing, cv_text, config)
+
+    assert result is None
+    mock_client.chat.completions.create.assert_not_called()
+
+
+def test_hebrew_senior_title_rejected(cv_text, config):
+    listing = JobListing(
+        title="מפתח/ת בכיר/ה Python",
+        company="Acme",
+        location="Tel Aviv",
+        url="https://drushim.co.il/job/senior-heb",
+        description="",
+        source="drushim",
+    )
+    mock_client = MagicMock()
+    with patch("src.matcher.Groq", return_value=mock_client):
+        result = match(listing, cv_text, config)
+
+    assert result is None
+    mock_client.chat.completions.create.assert_not_called()
+
+
+def test_manager_title_passes_filter(cv_text, config):
+    listing = JobListing(
+        title="Project Manager",
+        company="Acme",
+        location="Tel Aviv",
+        url="https://drushim.co.il/job/pm",
+        description="",
+        source="drushim",
+    )
+    mock_client = _mock_groq_response(75, "Skills align with role requirements.")
+    with patch("src.matcher.Groq", return_value=mock_client):
+        result = match(listing, cv_text, config)
+
+    assert result is not None
+    assert result.score == 75
+
+
 def test_returns_none_on_malformed_response(listing, cv_text, config):
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
