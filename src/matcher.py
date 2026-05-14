@@ -39,58 +39,33 @@ class BatchOutcome:
     failed_listings: list[JobListing]
 
 
-_SENIORITY_KEYWORDS = (
-    " senior", "senior ", "sr.", " sr ", " lead ", "team lead", "tech lead",
-    "principal", "head of", " chief", "vp ", " director",
-    "בכיר", "ראש צוות", " ראש ",
-)
-
-# User-rejected role types — auto-skip without sending to LLM
-_UNWANTED_KEYWORDS = (
-    # Full stack — not wanted
-    "full stack", "fullstack", "full-stack",
-    # UI/UX — not wanted
-    "ui/ux", "ux/ui", "ui ux", " ux ", " ui ", "ui designer", "ux designer",
-    # Economics / accounting — not wanted
-    "economist", "economics", "כלכלן", "כלכלנית", "חשב", "רואה חשבון",
-    # Freelance / contract — not wanted
-    "freelance", "פרילנס", "פרילנסר",
-    # Coordinators / appointment setters — not technical
-    "מתאם פגישות", "מתאמת פגישות", "מתאם/ת פגישות", "מתאם", "מתאמת",
-    "appointment setter", "scheduling coordinator",
-)
-
-
-def _passes_title_filter(listing: JobListing) -> bool:
-    title = f" {listing.title.lower()} "
-    if any(kw in title for kw in _SENIORITY_KEYWORDS):
-        return False
-    if any(kw in title for kw in _UNWANTED_KEYWORDS):
-        return False
-    return True
-
-
-# Match patterns like "3+ years", "5 years of experience", "minimum 3 years",
-# "3-5 years", "at least 4 years", and Hebrew "X שנות ניסיון" / "X שנים".
-# Captures the number; we reject when number >= 3.
+# Experience year patterns — these are fixed syntax rules, not user preferences
 _YEARS_PATTERNS = [
     re.compile(r"(\d+)\s*\+\s*years?", re.IGNORECASE),
     re.compile(r"(\d+)\s*[-–]\s*\d+\s*years?", re.IGNORECASE),
     re.compile(r"(?:minimum|at least|min\.?|over)\s+(\d+)\s*years?", re.IGNORECASE),
     re.compile(r"(\d+)\s*years?\s+(?:of\s+)?(?:experience|exp\.?|professional)", re.IGNORECASE),
-    re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)", ),
+    re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)"),
 ]
-_MAX_YEARS = 2  # candidate is 0-2 years
 
 
-def _passes_experience_filter(listing: JobListing) -> bool:
-    """Return False if the description explicitly requires more than 2 years."""
+def _passes_title_filter(listing: JobListing, config: Config) -> bool:
+    title = f" {listing.title.lower()} "
+    if any(kw in title for kw in config.filters.seniority_keywords):
+        return False
+    if any(kw in title for kw in config.filters.unwanted_keywords):
+        return False
+    return True
+
+
+def _passes_experience_filter(listing: JobListing, config: Config) -> bool:
+    """Return False if the description explicitly requires more experience than the candidate has."""
     text = f"{listing.title} {listing.description}"
     for pattern in _YEARS_PATTERNS:
         for match in pattern.finditer(text):
             try:
                 years = int(match.group(1))
-                if years > _MAX_YEARS:
+                if years > config.filters.max_years_experience:
                     return False
             except (ValueError, IndexError):
                 continue
@@ -108,9 +83,9 @@ def _prefilter(listing: JobListing, config: Config) -> bool:
     """Returns True if listing should be sent to the LLM, False to skip."""
     if not _passes_region_filter(listing, config):
         return False
-    if not _passes_title_filter(listing):
+    if not _passes_title_filter(listing, config):
         return False
-    if not _passes_experience_filter(listing):
+    if not _passes_experience_filter(listing, config):
         return False
     return True
 

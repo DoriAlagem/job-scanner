@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from src.matcher import match, match_batch, MatchResult
 from src.models import JobListing
-from src.config_loader import Config
+from src.config_loader import Config, FilterConfig
 
 
 @pytest.fixture
@@ -15,6 +15,22 @@ def config():
         match_threshold=70,
         email_language="English",
         email_to="dor3382@gmail.com",
+        filters=FilterConfig(
+            seniority_keywords=(
+                " senior", "senior ", "sr.", " sr ", " lead ", "team lead", "tech lead",
+                "principal", "head of", " chief", "vp ", " director",
+                "בכיר", "ראש צוות", " ראש ",
+            ),
+            unwanted_keywords=(
+                "full stack", "fullstack", "full-stack",
+                "ui/ux", "ux/ui", "ui ux", " ux ", " ui ", "ui designer", "ux designer",
+                "economist", "economics", "כלכלן", "כלכלנית", "חשב", "רואה חשבון",
+                "freelance", "פרילנס", "פרילנסר",
+                "מתאם פגישות", "מתאמת פגישות", "מתאם/ת פגישות", "מתאם", "מתאמת",
+                "appointment setter", "scheduling coordinator",
+            ),
+            max_years_experience=2,
+        ),
     )
 
 
