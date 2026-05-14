@@ -1,0 +1,41 @@
+name: Job Scanner
+
+on:
+  schedule:
+    # 06:00 and 18:00 Israel time (UTC+3) = 03:00 and 15:00 UTC
+    - cron: "0 3,15 * * *"
+  workflow_dispatch:  # allow manual trigger for testing
+
+permissions:
+  contents: write  # needed to commit seen_jobs.json back
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Run job scanner
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python -m src.orchestrator
+
+      - name: Commit updated seen_jobs.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_jobs.json
+          git diff --staged --quiet || git commit -m "chore: update seen_jobs.json [skip ci]"
+          git push
