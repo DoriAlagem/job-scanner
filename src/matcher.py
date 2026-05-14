@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 
@@ -69,6 +70,33 @@ def _passes_title_filter(listing: JobListing) -> bool:
     return True
 
 
+# Match patterns like "3+ years", "5 years of experience", "minimum 3 years",
+# "3-5 years", "at least 4 years", and Hebrew "X שנות ניסיון" / "X שנים".
+# Captures the number; we reject when number >= 3.
+_YEARS_PATTERNS = [
+    re.compile(r"(\d+)\s*\+\s*years?", re.IGNORECASE),
+    re.compile(r"(\d+)\s*[-–]\s*\d+\s*years?", re.IGNORECASE),
+    re.compile(r"(?:minimum|at least|min\.?|over)\s+(\d+)\s*years?", re.IGNORECASE),
+    re.compile(r"(\d+)\s*years?\s+(?:of\s+)?(?:experience|exp\.?|professional)", re.IGNORECASE),
+    re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)", ),
+]
+_MAX_YEARS = 2  # candidate is 0-2 years
+
+
+def _passes_experience_filter(listing: JobListing) -> bool:
+    """Return False if the description explicitly requires more than 2 years."""
+    text = f"{listing.title} {listing.description}"
+    for pattern in _YEARS_PATTERNS:
+        for match in pattern.finditer(text):
+            try:
+                years = int(match.group(1))
+                if years > _MAX_YEARS:
+                    return False
+            except (ValueError, IndexError):
+                continue
+    return True
+
+
 def _passes_region_filter(listing: JobListing, config: Config) -> bool:
     loc = listing.location.strip().lower()
     if not loc or loc in ("israel", "unknown", ""):
@@ -81,6 +109,8 @@ def _prefilter(listing: JobListing, config: Config) -> bool:
     if not _passes_region_filter(listing, config):
         return False
     if not _passes_title_filter(listing):
+        return False
+    if not _passes_experience_filter(listing):
         return False
     return True
 

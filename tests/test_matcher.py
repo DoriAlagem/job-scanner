@@ -136,6 +136,52 @@ def test_hebrew_senior_title_rejected(cv_text, config):
     mock_client.chat.completions.create.assert_not_called()
 
 
+def test_years_of_experience_in_description_rejected(cv_text, config):
+    """Listings whose description explicitly requires 3+ years of experience get pre-filtered."""
+    descriptions = [
+        "Looking for a developer with 3+ years of experience.",
+        "Requirements: 5 years of professional experience in Python.",
+        "Minimum 4 years experience required.",
+        "We need someone with at least 3 years of backend experience.",
+        "3-5 years experience.",
+        "דרישות: 5 שנות ניסיון בפיתוח Python.",
+        "מינימום 3 שנים ניסיון",
+    ]
+    mock_client = MagicMock()
+    for desc in descriptions:
+        listing = JobListing(
+            title="Python Developer",  # neutral title that would otherwise pass
+            company="Acme",
+            location="Tel Aviv",
+            url=f"https://x.com/{hash(desc)}",
+            description=desc,
+            source="drushim",
+        )
+        with patch("src.matcher.Groq", return_value=mock_client):
+            result = match(listing, cv_text, config)
+        assert result is not None, f"description should yield pre-filter result: {desc!r}"
+        assert result.score == 0, f"description {desc!r} should be rejected but got {result.score}"
+    mock_client.chat.completions.create.assert_not_called()
+
+
+def test_two_years_experience_still_passes(cv_text, config):
+    """Listings asking for 0-2 years should NOT be rejected."""
+    listing = JobListing(
+        title="Python Developer",
+        company="Acme",
+        location="Tel Aviv",
+        url="https://x.com/two-yrs",
+        description="Looking for a developer with 0-2 years of experience.",
+        source="drushim",
+    )
+    mock_client = _mock_groq_batch_response((80, "Good fit."))
+    with patch("src.matcher.Groq", return_value=mock_client):
+        result = match(listing, cv_text, config)
+
+    assert result is not None
+    assert result.score == 80
+
+
 def test_unwanted_title_keywords_rejected(cv_text, config):
     """Full Stack, UI/UX, Economist, Freelance, מתאם פגישות should all be pre-filtered."""
     unwanted_titles = [
