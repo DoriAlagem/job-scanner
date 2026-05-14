@@ -1,7 +1,7 @@
 import logging
-import time
 import requests
 from bs4 import BeautifulSoup
+from src.scrapers.base import scrape_terms
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
@@ -20,20 +20,12 @@ _REQUEST_DELAY = 1.5  # seconds between requests
 
 
 def scrape() -> list[JobListing]:
-    listings: list[JobListing] = []
-    seen_urls: set[str] = set()
-
-    for category in _CATEGORIES:
-        try:
-            url = f"{_BASE_URL}/jobs/{category}/"
-            response = requests.get(url, headers=_HEADERS, timeout=15)
-            response.raise_for_status()
-            listings.extend(_parse_listings(response.text, seen_urls))
-            time.sleep(_REQUEST_DELAY)
-        except Exception as e:
-            logger.warning("drushim: failed to scrape %s: %s", category, e)
-
-    return listings
+    return scrape_terms(
+        "drushim",
+        lambda cat: f"{_BASE_URL}/jobs/{cat}/",
+        _parse_listings,
+        _CATEGORIES,
+    )
 
 
 def _parse_listings(html: str, seen_urls: set[str]) -> list[JobListing]:
