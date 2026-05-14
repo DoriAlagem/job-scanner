@@ -160,13 +160,23 @@ def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config
         f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:1000]}"
         for i, l in enumerate(listings)
     )
-    return f"""You are evaluating job listings for a JUNIOR candidate (0-2 years experience, 3rd-year CS student).
+
+    max_yrs = config.filters.max_years_experience
+    exp_rule = (
+        f"Score EXACTLY 0 if the listing requires more than {max_yrs} year(s) of experience, "
+        f"or mentions: senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. "
+        f"This includes ranges like '4-6 years' or '3-5 שנות'. This is the most important rule — no exceptions."
+    )
+    override_lines = "\n".join(
+        f"- {role.title()} roles: score EXACTLY 0 if more than {yrs} year(s) of experience required."
+        for role, yrs in config.filters.role_max_years_overrides.items()
+    )
+    role_overrides_block = f"\nROLE-SPECIFIC OVERRIDES (apply before the general rule):\n{override_lines}" if override_lines else ""
+
+    return f"""You are evaluating job listings for a JUNIOR candidate (0-{max_yrs} years experience, 3rd-year CS student).
 
 RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
-Score EXACTLY 0 if the listing mentions ANY of: 3+ years, 4+ years, 5+ years, senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. This includes ranges like "4-6 years" or "3-5 שנות". This is the most important rule — enforce it every time, no exceptions.
-
-DATA ENGINEER EXCEPTION: For Data Engineer roles specifically, score EXACTLY 0 if the listing requires more than 1 year of experience. Apply this before all other rules.
-
+{exp_rule}{role_overrides_block}
 If experience level is not mentioned, the job is eligible — continue scoring.
 
 RULE #2 — ROLE FIT:

@@ -25,6 +25,27 @@ def test_save_and_reload_round_trips(tmp_path):
     assert reloaded.is_seen("https://drushim.co.il/job/123") is True
 
 
+def test_corrupted_file_starts_fresh(tmp_path):
+    path = tmp_path / "seen_jobs.json"
+    valid_ts = datetime.now(timezone.utc).isoformat()
+    path.write_text(json.dumps({
+        "https://drushim.co.il/job/good": valid_ts,
+        "https://drushim.co.il/job/bad": "not-a-timestamp",
+    }))
+
+    store = DedupStore(path)
+    assert store.is_seen("https://drushim.co.il/job/good") is True
+    assert store.is_seen("https://drushim.co.il/job/bad") is False
+
+
+def test_invalid_json_file_starts_fresh(tmp_path):
+    path = tmp_path / "seen_jobs.json"
+    path.write_text("<<<< conflict marker garbage >>>>")
+
+    store = DedupStore(path)
+    assert store.is_seen("https://anything.com") is False
+
+
 def test_urls_older_than_90_days_are_expired(tmp_path):
     path = tmp_path / "seen_jobs.json"
     old_ts = (datetime.now(timezone.utc) - timedelta(days=91)).isoformat()

@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class DedupStore:
@@ -20,10 +23,16 @@ class DedupStore:
         self._path.write_text(json.dumps(self._seen, indent=2))
 
     def _load(self) -> None:
-        data = json.loads(self._path.read_text())
+        try:
+            data = json.loads(self._path.read_text())
+        except Exception as e:
+            logger.warning("dedup_store: could not read %s, starting fresh: %s", self._path, e)
+            return
+
         cutoff = datetime.now(timezone.utc) - timedelta(days=90)
-        self._seen = {
-            url: ts
-            for url, ts in data.items()
-            if datetime.fromisoformat(ts) > cutoff
-        }
+        for url, ts in data.items():
+            try:
+                if datetime.fromisoformat(ts) > cutoff:
+                    self._seen[url] = ts
+            except Exception:
+                logger.warning("dedup_store: skipping malformed entry for %s", url)
