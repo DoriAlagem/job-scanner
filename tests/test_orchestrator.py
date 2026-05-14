@@ -115,7 +115,7 @@ def tmp_seen(tmp_path):
     return str(p)
 
 
-def test_run_sends_no_email_when_all_listings_below_threshold(tmp_config, tmp_seen, tmp_path):
+def test_run_sends_email_with_no_matches_message_when_below_threshold(tmp_config, tmp_seen, tmp_path):
     cv = tmp_path / "cv.txt"
     cv.write_text("Python developer CV")
 
@@ -132,7 +132,10 @@ def test_run_sends_no_email_when_all_listings_below_threshold(tmp_config, tmp_se
          patch("src.orchestrator.send") as mock_send:
         run(config_path=tmp_config, cv_path=str(cv), seen_path=tmp_seen)
 
-    mock_send.assert_not_called()
+    mock_send.assert_called_once()
+    subject, body, _ = mock_send.call_args.args
+    assert "0" in subject
+    assert "0 matching" not in body  # no-match quip is shown instead
 
 
 def test_run_sends_email_when_matches_found(tmp_config, tmp_seen, tmp_path):

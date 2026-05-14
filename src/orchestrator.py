@@ -101,13 +101,10 @@ def run(
     logger.info("Matching listings (score >= %d): %d, failed to evaluate: %d",
                 config.match_threshold, len(results), total_failed)
 
-    if results or total_failed > 0:
-        body = format_digest(results, failed_count=total_failed, quota_exhausted=quota_exhausted)
-        subject = f"Job Scanner: {len(results)} new match(es) found"
-        send(subject, body, config.email_to)
-        logger.info("Digest email sent with %d listings", len(results))
-    else:
-        logger.info("No matches above threshold and no failures — no email sent")
+    body = format_digest(results, failed_count=total_failed, quota_exhausted=quota_exhausted)
+    subject = f"Job Scanner: {len(results)} new match(es) found"
+    send(subject, body, config.email_to)
+    logger.info("Digest email sent with %d listings", len(results))
 
     store.save()
     logger.info("seen_jobs.json updated")
