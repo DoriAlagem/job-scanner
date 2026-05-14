@@ -23,7 +23,7 @@ _REQUEST_DELAY = 2.0
 def scrape() -> list[JobListing]:
     return scrape_terms(
         "indeed",
-        lambda term: f"{_BASE_URL}/jobs?q={term.replace(' ', '+')}&l=Israel&fromage=1",
+        lambda term: f"{_BASE_URL}/jobs?q={term.replace(' ', '+')}&l=Israel&fromage=90",
         _parse_listings,
         _SEARCH_TERMS,
         request_delay=_REQUEST_DELAY,
