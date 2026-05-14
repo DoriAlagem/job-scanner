@@ -8,12 +8,8 @@ from src.config_loader import Config, FilterConfig
 @pytest.fixture
 def config():
     return Config(
-        roles=["Python Developer", "Backend Developer"],
-        experience_levels=["entry level", "junior"],
-        location="Israel",
         regions=["תל אביב", "Tel Aviv", "הרצליה", "Herzliya", "מרכז", "Center"],
         match_threshold=70,
-        email_language="English",
         email_to="dor3382@gmail.com",
         filters=FilterConfig(
             seniority_keywords=(
@@ -260,9 +256,8 @@ def test_batch_returns_results_for_multiple_listings(cv_text, config):
 
 def test_prompt_reflects_config_thresholds(cv_text):
     cfg = Config(
-        roles=[], experience_levels=[], location="Israel",
         regions=["Tel Aviv"],
-        match_threshold=70, email_language="English", email_to="x@x.com",
+        match_threshold=70, email_to="x@x.com",
         filters=FilterConfig(
             seniority_keywords=(),
             unwanted_keywords=(),

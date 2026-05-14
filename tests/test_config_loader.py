@@ -13,12 +13,8 @@ _FILTERS = {
 @pytest.fixture
 def config_file(tmp_path):
     data = {
-        "roles": ["Backend Developer", "Python Developer"],
-        "experience_levels": ["entry level", "junior", "0-2 years experience"],
-        "location": "Israel",
         "regions": ["תל אביב", "Tel Aviv", "הרצליה"],
         "match_threshold": 70,
-        "email_language": "English",
         "email_to": "dor3382@gmail.com",
         "filters": _FILTERS,
     }
@@ -29,12 +25,8 @@ def config_file(tmp_path):
 
 def test_load_config_returns_correct_values(config_file):
     config = load_config(str(config_file))
-    assert config.roles == ["Backend Developer", "Python Developer"]
-    assert config.experience_levels == ["entry level", "junior", "0-2 years experience"]
-    assert config.location == "Israel"
     assert config.regions == ["תל אביב", "Tel Aviv", "הרצליה"]
     assert config.match_threshold == 70
-    assert config.email_language == "English"
     assert config.email_to == "dor3382@gmail.com"
 
 
@@ -53,7 +45,7 @@ def test_load_config_raises_on_missing_file():
 
 def test_load_config_raises_on_missing_fields(tmp_path):
     p = tmp_path / "config.yaml"
-    p.write_text(yaml.dump({"roles": ["Backend Developer"]}))
+    p.write_text(yaml.dump({"regions": ["Tel Aviv"]}))
     with pytest.raises(ValueError, match="missing required fields"):
         load_config(str(p))
 
