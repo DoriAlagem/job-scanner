@@ -1,9 +1,27 @@
 import logging
 import time
+from typing import Callable, Protocol
+
 import requests
 from src.models import JobListing
 
 logger = logging.getLogger(__name__)
+
+
+class Scraper(Protocol):
+    """Every job-board scraper must conform to this interface.
+
+    Used by the orchestrator's `_SCRAPERS` registry. The `Protocol` lets us
+    type-check without forcing inheritance.
+    """
+
+    def scrape(self) -> list[JobListing]:
+        """Fetch listings; per-term failures are swallowed and logged."""
+        ...
+
+    def fetch_full_description(self, url: str) -> str | None:
+        """Fetch the full description for a given listing URL, or None if unavailable."""
+        ...
 
 _DEFAULT_HEADERS = {
     "User-Agent": (
@@ -16,8 +34,8 @@ _DEFAULT_HEADERS = {
 
 def scrape_terms(
     name: str,
-    build_url,       # (term: str) -> str — full URL including query params
-    parse_html,      # (html: str, seen_urls: set[str]) -> list[JobListing]
+    build_url: Callable[[str], str],
+    parse_html: Callable[[str, set[str]], list[JobListing]],
     terms: list[str],
     request_delay: float = 1.5,
     headers: dict | None = None,
