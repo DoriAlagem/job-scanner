@@ -18,12 +18,8 @@ class FilterConfig:
 
 @dataclass
 class Config:
-    roles: list[str]
-    experience_levels: list[str]
-    location: str
     regions: list[str]
     match_threshold: int
-    email_language: str
     email_to: str
     filters: FilterConfig
 
@@ -36,7 +32,7 @@ def load_config(config_path: str = "config.yaml") -> Config:
     with open(path) as f:
         data = yaml.safe_load(f)
 
-    required = ["roles", "experience_levels", "location", "regions", "match_threshold", "email_language", "email_to", "filters"]
+    required = ["regions", "match_threshold", "email_to", "filters"]
     missing = [k for k in required if k not in data]
     if missing:
         raise ValueError(f"Config is missing required fields: {missing}")
@@ -50,12 +46,8 @@ def load_config(config_path: str = "config.yaml") -> Config:
     )
 
     return Config(
-        roles=data["roles"],
-        experience_levels=data["experience_levels"],
-        location=data["location"],
         regions=data["regions"],
         match_threshold=data["match_threshold"],
-        email_language=data["email_language"],
         email_to=data["email_to"],
         filters=filters,
     )

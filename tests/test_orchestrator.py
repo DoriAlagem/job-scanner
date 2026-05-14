@@ -16,27 +16,23 @@ def _listing(url="https://example.com/1", source="drushim", description=""):
 
 def test_scrape_all_combines_listings_from_all_scrapers():
     a = MagicMock()
-    a.__name__ = "src.scrapers.a"
     a.scrape.return_value = [_listing("https://a.com/1")]
 
     b = MagicMock()
-    b.__name__ = "src.scrapers.b"
     b.scrape.return_value = [_listing("https://b.com/1"), _listing("https://b.com/2")]
 
-    result = _scrape_all([a, b])
+    result = _scrape_all({"a": a, "b": b})
     assert len(result) == 3
 
 
 def test_scrape_all_continues_when_one_scraper_raises():
     ok = MagicMock()
-    ok.__name__ = "src.scrapers.ok"
     ok.scrape.return_value = [_listing("https://ok.com/1")]
 
     bad = MagicMock()
-    bad.__name__ = "src.scrapers.bad"
     bad.scrape.side_effect = RuntimeError("network down")
 
-    result = _scrape_all([ok, bad])
+    result = _scrape_all({"ok": ok, "bad": bad})
     assert len(result) == 1
     assert result[0].url == "https://ok.com/1"
 
@@ -86,12 +82,8 @@ def test_enrich_skips_listing_with_no_matching_scraper():
 # --- run() end-to-end pipeline ---
 
 _MINIMAL_CONFIG = {
-    "roles": ["Python Developer"],
-    "experience_levels": ["junior"],
-    "location": "Israel",
     "regions": ["תל אביב", "Tel Aviv"],
     "match_threshold": 70,
-    "email_language": "English",
     "email_to": "test@example.com",
     "filters": {
         "seniority_keywords": [" senior", "senior "],

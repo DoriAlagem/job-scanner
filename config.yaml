@@ -1,35 +1,3 @@
-roles:
-  # Specified by user
-  - IT Support
-  - DevOps Engineer
-  - QA Engineer
-  - Automation Engineer
-
-  # Backend / Software
-  - Backend Developer
-  - Python Developer
-  - Software Engineer
-  - Systems Engineer
-
-  # From IoT project + MQTT/distributed systems
-  - IoT Engineer
-  - Embedded Systems Engineer
-
-  # From ML course (100) + NumPy/Pandas/Scikit-learn
-  - Data Engineer
-  - Machine Learning Engineer
-  - Data Analyst
-
-  # From AWS + Git + automation workflows
-  - Cloud Engineer
-  - Infrastructure Engineer
-
-experience_levels:
-  - entry level
-  - junior
-  - 0-2 years experience
-
-location: Israel
 # Only include jobs in the center district. Listings with no location info are kept.
 regions:
   - תל אביב
@@ -65,7 +33,6 @@ regions:
   - מרכז
   - Center
 match_threshold: 70
-email_language: English
 email_to: dor3382@gmail.com
 
 filters:
