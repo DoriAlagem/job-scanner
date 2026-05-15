@@ -32,7 +32,7 @@ regions:
   - Bnei Brak
   - מרכז
   - Center
-match_threshold: 70
+match_threshold: 60
 email_to: dor3382@gmail.com
 
 filters:
