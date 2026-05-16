@@ -16,6 +16,7 @@ def config():
         regions=["תל אביב", "Tel Aviv", "הרצליה", "Herzliya", "מרכז", "Center"],
         match_threshold=60,
         email_to="x@x.com",
+        search_terms=[],
         filters=FilterConfig(
             seniority_keywords=(
                 " senior", "senior ", "sr.", " sr ", " lead ", "team lead", "tech lead",

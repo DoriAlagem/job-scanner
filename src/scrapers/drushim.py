@@ -19,7 +19,8 @@ _CATEGORIES = ["cat5", "cat6"]
 _REQUEST_DELAY = 1.5  # seconds between requests
 
 
-def scrape() -> list[JobListing]:
+def scrape(terms: list[str] | None = None) -> list[JobListing]:
+    # Drushim ignores `terms` — it scrapes by hi-tech category instead
     return scrape_terms(
         "drushim",
         lambda cat: f"{_BASE_URL}/jobs/{cat}/",

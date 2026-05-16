@@ -36,12 +36,12 @@ class ScoringSummary:
     quota_exhausted: bool
 
 
-def _scrape_all(scrapers: dict) -> list[JobListing]:
+def _scrape_all(scrapers: dict, terms: list[str]) -> list[JobListing]:
     """Run each scraper; log counts; swallow per-scraper failures."""
     all_listings: list[JobListing] = []
     for name, scraper in scrapers.items():
         try:
-            listings = scraper.scrape()
+            listings = scraper.scrape(terms)
             logger.info("%s: %d listings scraped", name, len(listings))
             all_listings.extend(listings)
         except Exception as e:
@@ -134,7 +134,7 @@ def run(
     cv_text = load_cv_text(cv_path)
     store = DedupStore(seen_path)
 
-    all_listings = _scrape_all(_SCRAPERS)
+    all_listings = _scrape_all(_SCRAPERS, config.search_terms)
     new_listings = _dedup(all_listings, store)
     filtered = _pre_filter(new_listings, config)
     _enrich(filtered, _SCRAPERS)

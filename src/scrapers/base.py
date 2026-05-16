@@ -15,8 +15,9 @@ class Scraper(Protocol):
     type-check without forcing inheritance.
     """
 
-    def scrape(self) -> list[JobListing]:
-        """Fetch listings; per-term failures are swallowed and logged."""
+    def scrape(self, terms: list[str]) -> list[JobListing]:
+        """Fetch listings for the given search terms; per-term failures are swallowed.
+        Scrapers that scrape by category (e.g. drushim) may ignore `terms`."""
         ...
 
     def fetch_full_description(self, url: str) -> str | None:

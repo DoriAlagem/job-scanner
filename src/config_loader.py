@@ -22,6 +22,7 @@ class Config:
     match_threshold: int
     email_to: str
     filters: FilterConfig
+    search_terms: list[str]
 
 
 def load_config(config_path: str = "config.yaml") -> Config:
@@ -50,6 +51,7 @@ def load_config(config_path: str = "config.yaml") -> Config:
         match_threshold=data["match_threshold"],
         email_to=data["email_to"],
         filters=filters,
+        search_terms=list(data.get("search_terms", [])),
     )
 
 
