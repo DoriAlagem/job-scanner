@@ -14,7 +14,7 @@ _HEADERS = {
     )
 }
 _BASE_URL = "https://www.alljobs.co.il"
-_SEARCH_TERMS = ["python", "software engineer", "devops", "qa automation", "backend", "qa", "manual qa", "automation engineer", "integration"]
+_SEARCH_TERMS = ["python", "software engineer", "devops", "qa automation", "backend", "qa", "manual qa", "automation engineer", "integration", "בדיקות", "אוטומציה", "מפתח תוכנה", "בק אנד", "אינטגרציה"]
 _REQUEST_DELAY = 1.5
 
 
