@@ -38,6 +38,13 @@ def load_config(config_path: str = "config.yaml") -> Config:
     if missing:
         raise ValueError(f"Config is missing required fields: {missing}")
 
+    if not isinstance(data["match_threshold"], int) or not 0 <= data["match_threshold"] <= 100:
+        raise ValueError(f"match_threshold must be an integer between 0 and 100, got: {data['match_threshold']!r}")
+    if not data["email_to"] or not isinstance(data["email_to"], str):
+        raise ValueError("email_to must be a non-empty string")
+    if not data["regions"] or not isinstance(data["regions"], list):
+        raise ValueError("regions must be a non-empty list")
+
     f = data["filters"]
     filters = FilterConfig(
         seniority_keywords=tuple(f.get("seniority_keywords", [])),
