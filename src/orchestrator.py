@@ -42,7 +42,10 @@ def _scrape_all(scrapers: dict, terms: list[str]) -> list[JobListing]:
     for name, scraper in scrapers.items():
         try:
             listings = scraper.scrape(terms)
-            logger.info("%s: %d listings scraped", name, len(listings))
+            if listings:
+                logger.info("%s: %d listings scraped", name, len(listings))
+            else:
+                logger.warning("%s: scraper returned 0 listings — possible block or site change", name)
             all_listings.extend(listings)
         except Exception as e:
             logger.warning("%s: scraper failed: %s", name, e)
@@ -83,6 +86,15 @@ def _enrich(listings: list[JobListing], scrapers: dict, delay: float = _ENRICH_D
     return enriched
 
 
+def _log_per_source_stats(listings: list[JobListing], matches: list[MatchResult], threshold: int) -> None:
+    from collections import Counter
+    scored_by_source: Counter = Counter(l.source for l in listings)
+    matched_by_source: Counter = Counter(r.listing.source for r in matches)
+    for source in sorted(scored_by_source):
+        logger.info("  %s: %d scored, %d matched (>= %d)",
+                    source, scored_by_source[source], matched_by_source[source], threshold)
+
+
 def _score(listings: list[JobListing], cv_text: str, config: Config, store: DedupStore) -> ScoringSummary:
     """Score listings in batches; mark scored ones seen; return summary."""
     matches: list[MatchResult] = []
@@ -110,6 +122,7 @@ def _score(listings: list[JobListing], cv_text: str, config: Config, store: Dedu
     matches.sort(key=lambda r: r.score, reverse=True)
     logger.info("Matching listings (score >= %d): %d, failed: %d",
                 config.match_threshold, len(matches), total_failed)
+    _log_per_source_stats(listings, matches, config.match_threshold)
     return ScoringSummary(matches=matches, failed_count=total_failed, quota_exhausted=quota_exhausted)
 
 

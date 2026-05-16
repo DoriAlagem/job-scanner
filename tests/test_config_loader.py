@@ -68,6 +68,36 @@ def test_load_config_raises_on_missing_fields(tmp_path):
         load_config(str(p))
 
 
+def test_load_config_raises_on_invalid_threshold(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": ["Tel Aviv"], "match_threshold": 150,
+        "email_to": "x@x.com", "filters": _FILTERS,
+    }))
+    with pytest.raises(ValueError, match="match_threshold"):
+        load_config(str(p))
+
+
+def test_load_config_raises_on_empty_email(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": ["Tel Aviv"], "match_threshold": 70,
+        "email_to": "", "filters": _FILTERS,
+    }))
+    with pytest.raises(ValueError, match="email_to"):
+        load_config(str(p))
+
+
+def test_load_config_raises_on_empty_regions(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": [], "match_threshold": 70,
+        "email_to": "x@x.com", "filters": _FILTERS,
+    }))
+    with pytest.raises(ValueError, match="regions"):
+        load_config(str(p))
+
+
 def test_load_cv_text_returns_nonempty_string():
     cv_path = str(Path(__file__).parent.parent / "Dor_Alagem_CV.pdf")
     text = load_cv_text(cv_path)
