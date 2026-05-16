@@ -175,6 +175,29 @@ def test_run_marks_listings_seen_after_scoring(tmp_config, tmp_seen, tmp_path):
     assert "https://drushim.co.il/job/42" in seen
 
 
+def test_run_does_not_mark_pre_filtered_listings_seen(tmp_config, tmp_seen, tmp_path):
+    """A listing dropped by pre-filter must NOT be marked seen — so if filter rules
+    change later, the same URL can re-appear and re-pass the filter."""
+    cv = tmp_path / "cv.txt"
+    cv.write_text("Python developer CV")
+
+    # Senior title gets dropped by pre-filter (seniority_keywords include " senior")
+    rejected = _listing("https://drushim.co.il/job/senior-1")
+    rejected.title = "Senior Software Engineer"
+
+    with patch("src.orchestrator._scrape_all", return_value=[rejected]), \
+         patch("src.orchestrator._enrich", return_value=0), \
+         patch("src.orchestrator.match_batch") as mock_match, \
+         patch("src.orchestrator.load_cv_text", return_value="cv text"), \
+         patch("src.orchestrator.send"):
+        run(config_path=tmp_config, cv_path=str(cv), seen_path=tmp_seen)
+
+    # match_batch must not even be called — pre-filter drops it first
+    mock_match.assert_not_called()
+    seen = json.loads(open(tmp_seen).read())
+    assert "https://drushim.co.il/job/senior-1" not in seen
+
+
 def test_run_does_not_mark_failed_listings_seen(tmp_config, tmp_seen, tmp_path):
     cv = tmp_path / "cv.txt"
     cv.write_text("Python developer CV")

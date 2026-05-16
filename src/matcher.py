@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import re
 import time
 from dataclasses import dataclass
 
@@ -39,84 +38,16 @@ class BatchOutcome:
     failed_listings: list[JobListing]
 
 
-# Experience year patterns — these are fixed syntax rules, not user preferences
-_YEARS_PATTERNS = [
-    re.compile(r"(\d+)\s*\+\s*years?", re.IGNORECASE),
-    re.compile(r"(\d+)\s*[-–]\s*\d+\s*years?", re.IGNORECASE),
-    re.compile(r"(?:minimum|at least|min\.?|over)\s+(\d+)\s*years?", re.IGNORECASE),
-    re.compile(r"(\d+)\s*years?\s+(?:of\s+)?(?:experience|exp\.?|professional)", re.IGNORECASE),
-    re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)"),
-    re.compile(r"(\d+)\s*[-–]\s*\d+\s*שנ(?:ות|ים|ה)"),  # Hebrew range: "4-6 שנות"
-]
-
-
-def _passes_title_filter(listing: JobListing, config: Config) -> bool:
-    title = f" {listing.title.lower()} "
-    if any(kw in title for kw in config.filters.seniority_keywords):
-        return False
-    if any(kw in title for kw in config.filters.unwanted_keywords):
-        return False
-    return True
-
-
-def _passes_experience_filter(listing: JobListing, config: Config) -> bool:
-    """Return False if the description explicitly requires more experience than the candidate has."""
-    title_lower = listing.title.lower()
-    max_years = config.filters.max_years_experience
-    for role, override in config.filters.role_max_years_overrides.items():
-        if role in title_lower:
-            max_years = override
-            break
-
-    text = f"{listing.title} {listing.description}"
-    for pattern in _YEARS_PATTERNS:
-        for match in pattern.finditer(text):
-            try:
-                years = int(match.group(1))
-                if years > max_years:
-                    return False
-            except (ValueError, IndexError):
-                continue
-    return True
-
-
-def _passes_region_filter(listing: JobListing, config: Config) -> bool:
-    loc = listing.location.strip().lower()
-    if not loc or loc in ("israel", "unknown", ""):
-        return True
-    return any(region.lower() in loc or loc in region.lower() for region in config.regions)
-
-
-def _prefilter(listing: JobListing, config: Config) -> bool:
-    """Returns True if listing should be sent to the LLM, False to skip."""
-    if not _passes_region_filter(listing, config):
-        return False
-    if not _passes_title_filter(listing, config):
-        return False
-    if not _passes_experience_filter(listing, config):
-        return False
-    return True
-
-
 def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> BatchOutcome:
-    """Score a batch of listings in one Groq call. Returns BatchOutcome with successful results
+    """Score a batch of listings in one Groq call. Assumes the input has already been
+    pre-filtered (see src/pre_filter.py). Returns BatchOutcome with successful results
     keyed by listing index and a list of listings that failed to evaluate."""
-    # Apply pre-filters first — filtered listings are treated as "scored 0", marked seen
-    filtered_results: dict[int, MatchResult] = {}
-    to_evaluate: list[tuple[int, JobListing]] = []
-    for i, listing in enumerate(listings):
-        if _prefilter(listing, config):
-            to_evaluate.append((i, listing))
-        else:
-            # Pre-filter rejection — still "evaluated" with score 0, mark as seen
-            filtered_results[i] = MatchResult(listing=listing, score=0, reasoning="Pre-filtered (region/seniority)")
-
-    if not to_evaluate:
-        return BatchOutcome(results=filtered_results, failed_listings=[])
+    if not listings:
+        return BatchOutcome(results={}, failed_listings=[])
 
     api_key = os.environ.get("GROQ_API_KEY", "")
     client = Groq(api_key=api_key)
-    prompt = _build_batch_prompt([l for _, l in to_evaluate], cv_text, config)
+    prompt = _build_batch_prompt(listings, cv_text, config)
 
     for attempt in range(_MAX_RETRIES):
         try:
@@ -127,17 +58,15 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
             )
             text = response.choices[0].message.content
             time.sleep(_REQUEST_DELAY)
-            parsed = _parse_batch_response(text, [l for _, l in to_evaluate])
+            parsed = _parse_batch_response(text, listings)
             if parsed is None:
-                # Parse failed entirely — all listings in batch are failures
-                return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
-            # Merge LLM results into final dict
-            for (original_idx, _listing), result in zip(to_evaluate, parsed):
+                return BatchOutcome(results={}, failed_listings=list(listings))
+            results: dict[int, MatchResult] = {}
+            for i, result in enumerate(parsed):
                 if result is not None:
-                    filtered_results[original_idx] = result
-            # Identify per-listing failures (some entries in `parsed` may be None)
-            failed = [l for (_, l), r in zip(to_evaluate, parsed) if r is None]
-            return BatchOutcome(results=filtered_results, failed_listings=failed)
+                    results[i] = result
+            failed = [l for l, r in zip(listings, parsed) if r is None]
+            return BatchOutcome(results=results, failed_listings=failed)
         except Exception as e:
             err = str(e)
             if "429" in err or "rate_limit" in err.lower():
@@ -150,9 +79,9 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
                     raise QuotaExhausted("Groq daily quota exhausted")
             else:
                 logger.warning("matcher: Groq batch call failed: %s", e)
-                return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
+                return BatchOutcome(results={}, failed_listings=list(listings))
 
-    return BatchOutcome(results=filtered_results, failed_listings=[l for _, l in to_evaluate])
+    return BatchOutcome(results={}, failed_listings=list(listings))
 
 
 def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
