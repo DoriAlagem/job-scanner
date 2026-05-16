@@ -86,7 +86,7 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
 
 def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
     jobs_block = "\n\n".join(
-        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:1000]}"
+        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:2000]}"
         for i, l in enumerate(listings)
     )
 
@@ -121,6 +121,11 @@ Score high (70-90) if most primary required skills match. Score low if a skill c
 
 ## Jobs to score
 {jobs_block}
+
+## Calibration examples (do NOT include in output — for scoring logic only)
+- "Senior Python Developer", "5+ years required" → score 0, "Requires 5 years of experience."
+- "Backend Developer", "Python, REST APIs, no experience mentioned" → score 82, "No experience requirement mentioned; strong Python and REST API match."
+- "Full Stack Developer", "React, Node.js, 1 year" → score 0, "Full-stack is an unwanted role."
 
 ## Output
 Return a JSON object with ONE field "results", an array of EXACTLY {len(listings)} objects in order. Each: "score" (int 0-100) and "reasoning" (one sentence stating experience requirement found, or "no experience requirement mentioned" if absent).
