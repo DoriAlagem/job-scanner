@@ -35,6 +35,27 @@ regions:
 match_threshold: 60
 email_to: dor3382@gmail.com
 
+# Search terms used by alljobs/jobmaster/linkedin scrapers.
+# Drushim ignores this and scrapes by hi-tech category.
+search_terms:
+  - python
+  - software engineer
+  - devops
+  - qa automation
+  - backend
+  - qa
+  - manual qa
+  - automation engineer
+  - integration
+  - data engineer
+  - machine learning
+  - cloud engineer
+  - בדיקות
+  - אוטומציה
+  - מפתח תוכנה
+  - בק אנד
+  - אינטגרציה
+
 filters:
   seniority_keywords:
     - " senior"

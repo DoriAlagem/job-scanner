@@ -16,6 +16,7 @@ def config_file(tmp_path):
         "regions": ["תל אביב", "Tel Aviv", "הרצליה"],
         "match_threshold": 70,
         "email_to": "dor3382@gmail.com",
+        "search_terms": ["python", "devops"],
         "filters": _FILTERS,
     }
     p = tmp_path / "config.yaml"
@@ -36,6 +37,23 @@ def test_load_config_loads_filters(config_file):
     assert " senior" in config.filters.seniority_keywords
     assert "full stack" in config.filters.unwanted_keywords
     assert config.filters.max_years_experience == 2
+
+
+def test_search_terms_loaded_from_config(config_file):
+    config = load_config(str(config_file))
+    assert config.search_terms == ["python", "devops"]
+
+
+def test_search_terms_default_to_empty_list_when_missing(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": ["Tel Aviv"],
+        "match_threshold": 70,
+        "email_to": "x@x.com",
+        "filters": _FILTERS,
+    }))
+    config = load_config(str(p))
+    assert config.search_terms == []
 
 
 def test_load_config_raises_on_missing_file():

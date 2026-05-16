@@ -14,6 +14,7 @@ _CONFIG = {
     "regions": ["Tel Aviv", "תל אביב", "מרכז"],
     "match_threshold": 70,
     "email_to": "test@example.com",
+    "search_terms": ["python"],
     "filters": {
         "seniority_keywords": [" senior", "senior "],
         "unwanted_keywords": ["full stack", "מתאם"],

@@ -14,13 +14,12 @@ _HEADERS = {
         "Chrome/120.0.0.0 Safari/537.36"
     )
 }
-_SEARCH_TERMS = ["python", "software engineer", "devops", "qa automation", "backend", "data engineer", "machine learning", "cloud engineer", "qa", "manual qa", "automation engineer", "integration", "בדיקות", "אוטומציה", "מפתח תוכנה", "בק אנד", "אינטגרציה"]
 _REQUEST_DELAY = 2.0
 # f_TPR=r2592000 = posted in last 30 days; dedup prevents re-sending seen jobs
 _BASE_URL = "https://il.linkedin.com/jobs/search"
 
 
-def scrape() -> list[JobListing]:
+def scrape(terms: list[str]) -> list[JobListing]:
     def _build_url(term: str) -> str:
         return f"{_BASE_URL}?{urlencode({'keywords': term, 'location': 'Israel', 'f_TPR': 'r2592000'})}"
 
@@ -28,7 +27,7 @@ def scrape() -> list[JobListing]:
         "linkedin",
         _build_url,
         _parse_listings,
-        _SEARCH_TERMS,
+        terms,
         request_delay=_REQUEST_DELAY,
     )
 

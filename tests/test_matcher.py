@@ -17,6 +17,7 @@ def config():
         regions=["Tel Aviv"],
         match_threshold=60,
         email_to="x@x.com",
+        search_terms=[],
         filters=FilterConfig(
             seniority_keywords=(),
             unwanted_keywords=(),
@@ -84,6 +85,7 @@ def test_prompt_reflects_config_thresholds(cv_text):
     cfg = Config(
         regions=["Tel Aviv"],
         match_threshold=70, email_to="x@x.com",
+        search_terms=[],
         filters=FilterConfig(
             seniority_keywords=(),
             unwanted_keywords=(),

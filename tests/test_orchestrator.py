@@ -21,8 +21,10 @@ def test_scrape_all_combines_listings_from_all_scrapers():
     b = MagicMock()
     b.scrape.return_value = [_listing("https://b.com/1"), _listing("https://b.com/2")]
 
-    result = _scrape_all({"a": a, "b": b})
+    result = _scrape_all({"a": a, "b": b}, ["python"])
     assert len(result) == 3
+    a.scrape.assert_called_once_with(["python"])
+    b.scrape.assert_called_once_with(["python"])
 
 
 def test_scrape_all_continues_when_one_scraper_raises():
@@ -32,7 +34,7 @@ def test_scrape_all_continues_when_one_scraper_raises():
     bad = MagicMock()
     bad.scrape.side_effect = RuntimeError("network down")
 
-    result = _scrape_all({"ok": ok, "bad": bad})
+    result = _scrape_all({"ok": ok, "bad": bad}, ["python"])
     assert len(result) == 1
     assert result[0].url == "https://ok.com/1"
 
@@ -85,6 +87,7 @@ _MINIMAL_CONFIG = {
     "regions": ["תל אביב", "Tel Aviv"],
     "match_threshold": 70,
     "email_to": "test@example.com",
+    "search_terms": ["python"],
     "filters": {
         "seniority_keywords": [" senior", "senior "],
         "unwanted_keywords": ["full stack"],
