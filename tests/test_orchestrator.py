@@ -251,3 +251,37 @@ def test_run_sends_partial_results_when_quota_exhausted(tmp_config, tmp_seen, tm
     mock_send.assert_called_once()
     _, body, _ = mock_send.call_args.args
     assert "quota" in body.lower() or "1" in mock_send.call_args.args[0]
+
+
+def test_run_retries_failed_listings_individually(tmp_config, tmp_seen, tmp_path):
+    """A listing that fails batch scoring should be retried as a single-item call."""
+    cv = tmp_path / "cv.txt"
+    cv.write_text("Python developer CV")
+
+    listing = _listing("https://drushim.co.il/job/retry-me")
+    call_count = 0
+
+    def mock_match_batch(batch, *args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if len(batch) > 1 or call_count == 1:
+            # First call (batch) fails entirely
+            return BatchOutcome(results={}, failed_listings=list(batch))
+        # Retry (single item) succeeds
+        return BatchOutcome(
+            results={listing.url: MatchResult(listing=listing, score=85, reasoning="Good fit.")},
+            failed_listings=[],
+        )
+
+    with patch("src.orchestrator._scrape_all", return_value=[listing]), \
+         patch("src.orchestrator._enrich", return_value=0), \
+         patch("src.orchestrator.match_batch", side_effect=mock_match_batch), \
+         patch("src.orchestrator.load_cv_text", return_value="cv text"), \
+         patch("src.orchestrator.send") as mock_send:
+        run(config_path=tmp_config, cv_path=str(cv), seen_path=tmp_seen)
+
+    # match_batch called twice: once for batch, once for retry
+    assert call_count == 2
+    # Recovered listing appears in the email
+    _, body, _ = mock_send.call_args.args
+    assert "drushim.co.il/job/retry-me" in body

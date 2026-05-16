@@ -98,7 +98,7 @@ def _log_per_source_stats(listings: list[JobListing], matches: list[MatchResult]
 def _score(listings: list[JobListing], cv_text: str, config: Config, store: DedupStore) -> ScoringSummary:
     """Score listings in batches; mark scored ones seen; return summary."""
     matches: list[MatchResult] = []
-    total_failed = 0
+    all_failed: list[JobListing] = []
     quota_exhausted = False
 
     for i in range(0, len(listings), _BATCH_SIZE):
@@ -115,15 +115,35 @@ def _score(listings: list[JobListing], cv_text: str, config: Config, store: Dedu
             if result.score >= config.match_threshold:
                 matches.append(result)
 
-        total_failed += len(outcome.failed_listings)
-        for failed in outcome.failed_listings:
-            logger.warning("Failed to evaluate: %r (%s)", failed.title, failed.source)
+        all_failed.extend(outcome.failed_listings)
 
+    # Retry each failed listing individually — single-item JSON is simpler and
+    # succeeds most of the time when multi-item batch formatting caused the failure.
+    recovered = 0
+    for listing in all_failed:
+        if quota_exhausted:
+            break
+        logger.warning("Retrying failed listing: %r (%s)", listing.title, listing.source)
+        try:
+            retry = match_batch([listing], cv_text, config)
+        except QuotaExhausted:
+            quota_exhausted = True
+            break
+        if retry.failed_listings:
+            logger.warning("Retry also failed for: %r (%s)", listing.title, listing.source)
+        else:
+            recovered += 1
+            for result in retry.results.values():
+                store.mark_seen(result.listing.url)
+                if result.score >= config.match_threshold:
+                    matches.append(result)
+
+    total_failed = len([l for l in all_failed if l.url not in {r.listing.url for r in matches}]) - recovered
     matches.sort(key=lambda r: r.score, reverse=True)
-    logger.info("Matching listings (score >= %d): %d, failed: %d",
-                config.match_threshold, len(matches), total_failed)
+    logger.info("Matching listings (score >= %d): %d, failed: %d, retried: %d recovered",
+                config.match_threshold, len(matches), len(all_failed), recovered)
     _log_per_source_stats(listings, matches, config.match_threshold)
-    return ScoringSummary(matches=matches, failed_count=total_failed, quota_exhausted=quota_exhausted)
+    return ScoringSummary(matches=matches, failed_count=len(all_failed) - recovered, quota_exhausted=quota_exhausted)
 
 
 def _notify(summary: ScoringSummary, email_to: str) -> None:
