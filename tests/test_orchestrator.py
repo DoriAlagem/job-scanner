@@ -116,7 +116,7 @@ def test_run_sends_email_with_no_matches_message_when_below_threshold(tmp_config
 
     listing = _listing("https://drushim.co.il/1")
     outcome = BatchOutcome(
-        results={0: MatchResult(listing=listing, score=40, reasoning="Poor fit.")},
+        results={"https://drushim.co.il/1": MatchResult(listing=listing, score=40, reasoning="Poor fit.")},
         failed_listings=[],
     )
 
@@ -139,7 +139,7 @@ def test_run_sends_email_when_matches_found(tmp_config, tmp_seen, tmp_path):
 
     listing = _listing("https://drushim.co.il/1")
     outcome = BatchOutcome(
-        results={0: MatchResult(listing=listing, score=85, reasoning="Great fit.")},
+        results={"https://drushim.co.il/1": MatchResult(listing=listing, score=85, reasoning="Great fit.")},
         failed_listings=[],
     )
 
@@ -163,7 +163,7 @@ def test_run_marks_listings_seen_after_scoring(tmp_config, tmp_seen, tmp_path):
 
     listing = _listing("https://drushim.co.il/job/42")
     outcome = BatchOutcome(
-        results={0: MatchResult(listing=listing, score=80, reasoning="Good fit.")},
+        results={"https://drushim.co.il/job/42": MatchResult(listing=listing, score=80, reasoning="Good fit.")},
         failed_listings=[],
     )
 
@@ -230,7 +230,7 @@ def test_run_sends_partial_results_when_quota_exhausted(tmp_config, tmp_seen, tm
     exhausted = _listing("https://drushim.co.il/2")
 
     first_outcome = BatchOutcome(
-        results={0: MatchResult(listing=good, score=85, reasoning="Good fit.")},
+        results={"https://drushim.co.il/1": MatchResult(listing=good, score=85, reasoning="Good fit.")},
         failed_listings=[],
     )
 

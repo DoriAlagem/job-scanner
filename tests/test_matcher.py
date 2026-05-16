@@ -76,8 +76,8 @@ def test_batch_returns_results_for_multiple_listings(cv_text, config):
         outcome = match_batch(listings, cv_text, config)
 
     assert len(outcome.results) == 2
-    assert outcome.results[0].score == 85
-    assert outcome.results[1].score == 60
+    assert outcome.results["https://x.com/1"].score == 85
+    assert outcome.results["https://x.com/2"].score == 60
     assert outcome.failed_listings == []
 
 
@@ -115,7 +115,7 @@ def test_batch_handles_malformed_response(listing, cv_text, config):
 
     assert len(outcome.failed_listings) == 1
     assert outcome.failed_listings[0] is listing
-    assert 0 not in outcome.results
+    assert listing.url not in outcome.results
 
 
 def test_empty_input_returns_empty_outcome(cv_text, config):
