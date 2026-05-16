@@ -32,9 +32,9 @@ class MatchResult:
 
 @dataclass
 class BatchOutcome:
-    """Result of scoring a batch. `results` holds successful matches keyed by listing index;
-    missing indices mean that listing failed to evaluate and should NOT be marked as seen."""
-    results: dict[int, MatchResult]
+    """Result of scoring a batch. `results` holds successful matches keyed by listing URL;
+    missing URLs mean that listing failed to evaluate and should NOT be marked as seen."""
+    results: dict[str, MatchResult]
     failed_listings: list[JobListing]
 
 
@@ -61,10 +61,10 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
             parsed = _parse_batch_response(text, listings)
             if parsed is None:
                 return BatchOutcome(results={}, failed_listings=list(listings))
-            results: dict[int, MatchResult] = {}
-            for i, result in enumerate(parsed):
+            results: dict[str, MatchResult] = {}
+            for listing, result in zip(listings, parsed):
                 if result is not None:
-                    results[i] = result
+                    results[listing.url] = result
             failed = [l for l, r in zip(listings, parsed) if r is None]
             return BatchOutcome(results=results, failed_listings=failed)
         except Exception as e:
@@ -169,4 +169,4 @@ def _parse_batch_response(text: str, listings: list[JobListing]) -> list[MatchRe
 # Backwards-compatible single-listing match (used by tests, not by orchestrator)
 def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | None:
     outcome = match_batch([listing], cv_text, config)
-    return outcome.results.get(0)
+    return outcome.results.get(listing.url)
