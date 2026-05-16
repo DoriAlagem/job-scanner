@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 import yaml
@@ -69,4 +70,11 @@ def load_cv_text(cv_path: str = "Dor_Alagem_CV.pdf") -> str:
 
     reader = PdfReader(str(path))
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
-    return text.strip()
+    return _clean_cv_text(text)
+
+
+def _clean_cv_text(text: str) -> str:
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    lines = [l for l in text.splitlines() if not re.fullmatch(r"\s*\d+\s*", l)]
+    return "\n".join(lines).strip()
