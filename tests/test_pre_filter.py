@@ -3,6 +3,7 @@
 Pre-filter is rule-based, deterministic, and runs before any LLM call —
 no Groq mocking needed."""
 
+import logging
 import pytest
 
 from src import pre_filter
@@ -129,3 +130,10 @@ def test_apply_returns_only_passing_listings(config):
     kept = pre_filter.apply(listings, config)
     assert len(kept) == 1
     assert kept[0].title == "Python Dev"
+
+
+def test_apply_logs_drop_reason_at_debug(config, caplog):
+    with caplog.at_level(logging.DEBUG, logger="src.pre_filter"):
+        pre_filter.apply([_listing(title="Senior Engineer", location="Tel Aviv")], config)
+    assert any("pre-filter dropped" in r.message for r in caplog.records)
+    assert any("seniority" in r.message or "unwanted" in r.message for r in caplog.records)

@@ -5,10 +5,13 @@ experience requirements in the description. Listings that fail are dropped
 and NOT marked seen, so they re-appear in future runs if filter rules change.
 """
 
+import logging
 import re
 
 from src.config_loader import Config
 from src.models import JobListing
+
+logger = logging.getLogger(__name__)
 
 
 # Experience year patterns — syntax rules, not user preferences
@@ -24,15 +27,24 @@ _YEARS_PATTERNS = [
 
 def apply(listings: list[JobListing], config: Config) -> list[JobListing]:
     """Return only listings that pass all pre-filters."""
-    return [l for l in listings if _passes(l, config)]
+    kept = []
+    for listing in listings:
+        reason = _drop_reason(listing, config)
+        if reason is None:
+            kept.append(listing)
+        else:
+            logger.debug("pre-filter dropped %r (%s): %s", listing.title, listing.source, reason)
+    return kept
 
 
-def _passes(listing: JobListing, config: Config) -> bool:
-    return (
-        _passes_region(listing, config)
-        and _passes_title(listing, config)
-        and _passes_experience(listing, config)
-    )
+def _drop_reason(listing: JobListing, config: Config) -> str | None:
+    if not _passes_region(listing, config):
+        return f"region '{listing.location}' not in configured regions"
+    if not _passes_title(listing, config):
+        return f"title '{listing.title}' matches seniority/unwanted keyword"
+    if not _passes_experience(listing, config):
+        return "experience requirement in title/description exceeds limit"
+    return None
 
 
 def _passes_region(listing: JobListing, config: Config) -> bool:
