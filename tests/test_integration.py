@@ -106,11 +106,15 @@ def test_full_pipeline_filters_and_scores_correctly(tmp_config, tmp_seen, tmp_cv
     assert "drushim.co.il/job/keep1" in body
     assert to == "test@example.com"
 
-    # All scored listings (the 5 pre-filtered + the 1 LLM-scored) marked seen
+    # Only LLM-scored listings are marked seen. Pre-filtered ones are dropped silently
+    # so they re-appear (and re-pass the filter) if rules change in the future.
     seen = json.loads(open(tmp_seen).read())
     assert "https://drushim.co.il/job/keep1" in seen
-    assert "https://drushim.co.il/job/senior" in seen
-    assert "https://drushim.co.il/job/fullstack" in seen
+    assert "https://drushim.co.il/job/senior" not in seen
+    assert "https://drushim.co.il/job/fullstack" not in seen
+    assert "https://drushim.co.il/job/haifa" not in seen
+    assert "https://drushim.co.il/job/5yrs" not in seen
+    assert "https://drushim.co.il/job/de" not in seen
 
 
 def test_full_pipeline_skips_already_seen(tmp_config, tmp_seen, tmp_cv):

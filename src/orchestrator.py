@@ -8,6 +8,7 @@ from src.email_formatter import format_digest
 from src.email_sender import send
 from src.matcher import match_batch, MatchResult, QuotaExhausted, _BATCH_SIZE
 from src.models import JobListing
+from src import pre_filter
 from src.scrapers import alljobs, drushim, jobmaster, linkedin
 
 # Single source of truth: source name → scraper module.
@@ -53,6 +54,14 @@ def _dedup(listings: list[JobListing], store: DedupStore) -> list[JobListing]:
     new = [l for l in listings if not store.is_seen(l.url)]
     logger.info("New listings after dedup: %d (of %d total)", len(new), len(listings))
     return new
+
+
+def _pre_filter(listings: list[JobListing], config: Config) -> list[JobListing]:
+    """Drop listings that fail region/title/experience filters. Dropped listings
+    are NOT marked seen, so they re-appear in future runs if filter rules change."""
+    kept = pre_filter.apply(listings, config)
+    logger.info("Pre-filter kept %d of %d listings", len(kept), len(listings))
+    return kept
 
 
 def _enrich(listings: list[JobListing], scrapers: dict, delay: float = _ENRICH_DELAY) -> int:
@@ -127,8 +136,9 @@ def run(
 
     all_listings = _scrape_all(_SCRAPERS)
     new_listings = _dedup(all_listings, store)
-    _enrich(new_listings, _SCRAPERS)
-    summary = _score(new_listings, cv_text, config, store)
+    filtered = _pre_filter(new_listings, config)
+    _enrich(filtered, _SCRAPERS)
+    summary = _score(filtered, cv_text, config, store)
     _notify(summary, config.email_to)
 
     store.save()
