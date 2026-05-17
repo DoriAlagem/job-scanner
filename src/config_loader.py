@@ -16,6 +16,20 @@ class FilterConfig:
         if self.role_max_years_overrides is None:
             self.role_max_years_overrides = {}
 
+    def title_is_blocked(self, title: str) -> bool:
+        """True if the title matches any seniority or unwanted keyword."""
+        padded = f" {title.lower()} "
+        return any(kw in padded for kw in self.seniority_keywords) or \
+               any(kw in padded for kw in self.unwanted_keywords)
+
+    def max_years_for(self, title: str) -> int:
+        """Effective experience cap for this title, respecting role overrides."""
+        title_lower = title.lower()
+        for role, override in self.role_max_years_overrides.items():
+            if role in title_lower:
+                return override
+        return self.max_years_experience
+
 
 @dataclass
 class Config:

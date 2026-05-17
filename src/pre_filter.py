@@ -55,12 +55,7 @@ def _passes_region(listing: JobListing, config: Config) -> bool:
 
 
 def _passes_title(listing: JobListing, config: Config) -> bool:
-    title = f" {listing.title.lower()} "
-    if any(kw in title for kw in config.filters.seniority_keywords):
-        return False
-    if any(kw in title for kw in config.filters.unwanted_keywords):
-        return False
-    return True
+    return not config.filters.title_is_blocked(listing.title)
 
 
 def passes_experience(listing: JobListing, config: Config) -> bool:
@@ -92,13 +87,7 @@ def experience_prompt_block(config: Config) -> str:
 
 def _passes_experience(listing: JobListing, config: Config) -> bool:
     """False if the description explicitly requires more experience than allowed."""
-    title_lower = listing.title.lower()
-    max_years = config.filters.max_years_experience
-    for role, override in config.filters.role_max_years_overrides.items():
-        if role in title_lower:
-            max_years = override
-            break
-
+    max_years = config.filters.max_years_for(listing.title)
     text = f"{listing.title} {listing.description}"
     for pattern in _YEARS_PATTERNS:
         for match in pattern.finditer(text):
