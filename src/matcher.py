@@ -86,7 +86,7 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
 
 def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config) -> str:
     jobs_block = "\n\n".join(
-        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:2000]}"
+        f"### Job {i + 1}\nTitle: {l.title}\nCompany: {l.company}\nLocation: {l.location}\nDescription: {l.description[:1000]}"
         for i, l in enumerate(listings)
     )
 
