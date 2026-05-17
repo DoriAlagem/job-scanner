@@ -6,7 +6,7 @@ from src.config_loader import Config, load_config, load_cv_text
 from src.dedup_store import DedupStore
 from src.email_formatter import format_digest
 from src.email_sender import send
-from src.matcher import match_batch, MatchResult, QuotaExhausted, _BATCH_SIZE
+from src.matcher import make_client, match_batch, MatchResult, QuotaExhausted, _BATCH_SIZE
 from src.models import JobListing
 from src import pre_filter
 from src.scrapers import alljobs, drushim, jobmaster, linkedin
@@ -107,6 +107,7 @@ def _log_per_source_stats(listings: list[JobListing], matches: list[MatchResult]
 
 def _score(listings: list[JobListing], cv_text: str, config: Config, store: DedupStore) -> ScoringSummary:
     """Score listings in batches; mark scored ones seen; return summary."""
+    client = make_client()
     matches: list[MatchResult] = []
     all_failed: list[JobListing] = []
     quota_exhausted = False
@@ -114,7 +115,7 @@ def _score(listings: list[JobListing], cv_text: str, config: Config, store: Dedu
     for i in range(0, len(listings), _BATCH_SIZE):
         batch = listings[i:i + _BATCH_SIZE]
         try:
-            outcome = match_batch(batch, cv_text, config)
+            outcome = match_batch(batch, cv_text, config, client=client)
         except QuotaExhausted:
             logger.warning("Quota exhausted — stopping early, sending results so far")
             quota_exhausted = True
@@ -135,7 +136,7 @@ def _score(listings: list[JobListing], cv_text: str, config: Config, store: Dedu
             break
         logger.warning("Retrying failed listing: %r (%s)", listing.title, listing.source)
         try:
-            retry = match_batch([listing], cv_text, config)
+            retry = match_batch([listing], cv_text, config, client=client)
         except QuotaExhausted:
             quota_exhausted = True
             break
