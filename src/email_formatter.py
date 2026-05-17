@@ -17,6 +17,7 @@ def format_digest(
     results: list[MatchResult],
     failed_count: int = 0,
     quota_exhausted: bool = False,
+    no_match_quip: str | None = None,
 ) -> str:
     lines = [
         "Job Scanner Digest",
@@ -36,7 +37,8 @@ def format_digest(
                 "",
             ]
     else:
-        lines += ["", random.choice(_NO_MATCH_QUIPS), ""]
+        quip = no_match_quip if no_match_quip is not None else random.choice(_NO_MATCH_QUIPS)
+        lines += ["", quip, ""]
 
     if failed_count > 0 or quota_exhausted:
         lines.append("-" * 50)
