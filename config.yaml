@@ -98,6 +98,31 @@ filters:
     - "מתאם/ת פגישות"
     - "appointment setter"
     - "scheduling coordinator"
+    # warehouse / logistics
+    - "מחסנאי"
+    - "מחסנאית"
+    - "warehouse"
+    - "logistics coordinator"
+    - "מנהל לוגיסטיקה"
+    # sales (non-tech)
+    - "איש מכירות"
+    - "אשת מכירות"
+    - "נציג מכירות"
+    - "נציגת מכירות"
+    - "sales representative"
+    - "account executive"
+    # social / welfare
+    - "עובד סוציאלי"
+    - "עובדת סוציאלית"
+    - 'עו"ס'
+    # general coordinator (beyond meeting coordinators)
+    - "רכז/ת"
+    - " רכז "
+    - " רכזת "
+    # marketing (non-tech)
+    - "מנהל שיווק"
+    - "מנהלת שיווק"
+    - "marketing manager"
   max_years_experience: 2
   role_max_years_overrides:
     data engineer: 1
