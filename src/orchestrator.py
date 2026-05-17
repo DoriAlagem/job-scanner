@@ -105,6 +105,38 @@ def _log_per_source_stats(listings: list[JobListing], matches: list[MatchResult]
                     source, scored_by_source[source], matched_by_source[source], threshold)
 
 
+def _accept(result: MatchResult, config: Config, store: DedupStore, matches: list[MatchResult]) -> None:
+    """Mark a scored listing seen and append it to matches if above threshold."""
+    store.mark_seen(result.listing.url)
+    if result.score >= config.match_threshold:
+        matches.append(result)
+
+
+def _retry_failed(
+    failed: list[JobListing],
+    cv_text: str,
+    config: Config,
+    client,
+    store: DedupStore,
+    matches: list[MatchResult],
+) -> tuple[int, bool]:
+    """Retry each failed listing individually; return (recovered_count, quota_exhausted)."""
+    recovered = 0
+    for listing in failed:
+        logger.warning("Retrying failed listing: %r (%s)", listing.title, listing.source)
+        try:
+            retry = match_batch([listing], cv_text, config, client=client)
+        except QuotaExhausted:
+            return recovered, True
+        if retry.failed_listings:
+            logger.warning("Retry also failed for: %r (%s)", listing.title, listing.source)
+        else:
+            recovered += 1
+            for result in retry.results.values():
+                _accept(result, config, store, matches)
+    return recovered, False
+
+
 def _score(listings: list[JobListing], cv_text: str, config: Config, store: DedupStore) -> ScoringSummary:
     """Score listings in batches; mark scored ones seen; return summary."""
     client = make_client()
@@ -122,34 +154,16 @@ def _score(listings: list[JobListing], cv_text: str, config: Config, store: Dedu
             break
 
         for result in outcome.results.values():
-            store.mark_seen(result.listing.url)
-            if result.score >= config.match_threshold:
-                matches.append(result)
-
+            _accept(result, config, store, matches)
         all_failed.extend(outcome.failed_listings)
 
-    # Retry each failed listing individually — single-item JSON is simpler and
-    # succeeds most of the time when multi-item batch formatting caused the failure.
-    recovered = 0
-    for listing in all_failed:
-        if quota_exhausted:
-            break
-        logger.warning("Retrying failed listing: %r (%s)", listing.title, listing.source)
-        try:
-            retry = match_batch([listing], cv_text, config, client=client)
-        except QuotaExhausted:
-            quota_exhausted = True
-            break
-        if retry.failed_listings:
-            logger.warning("Retry also failed for: %r (%s)", listing.title, listing.source)
-        else:
-            recovered += 1
-            for result in retry.results.values():
-                store.mark_seen(result.listing.url)
-                if result.score >= config.match_threshold:
-                    matches.append(result)
+    if not quota_exhausted:
+        recovered, quota_exhausted = _retry_failed(
+            all_failed, cv_text, config, client, store, matches
+        )
+    else:
+        recovered = 0
 
-    total_failed = len([l for l in all_failed if l.url not in {r.listing.url for r in matches}]) - recovered
     matches.sort(key=lambda r: r.score, reverse=True)
     logger.info("Matching listings (score >= %d): %d, failed: %d, retried: %d recovered",
                 config.match_threshold, len(matches), len(all_failed), recovered)
