@@ -73,6 +73,8 @@ filters:
     - "בכיר"
     - "ראש צוות"
     - " ראש "
+    - "architect"
+    - "ארכיטקט"
   unwanted_keywords:
     - "full stack"
     - "fullstack"
@@ -123,6 +125,26 @@ filters:
     - "מנהל שיווק"
     - "מנהלת שיווק"
     - "marketing manager"
+    - "marketing analyst"
+    - "marketing data analyst"
+    - "משווק"
+    - "משווקת"
+    # project management / PMO
+    - "project manager"
+    - "מנהל פרויקט"
+    - "מנהלת פרויקט"
+    - " pmo"
+    - "pmo "
+    # science / non-CS research
+    - "physicist"
+    - "פיזיקאי"
+    - "פיזיקאית"
+    # IT admin (non-engineering)
+    - "citrix"
+    - "sap user"
+    - "sap specialist"
+    - "notion user"
+    - "notion specialist"
   max_years_experience: 2
   role_max_years_overrides:
     data engineer: 1
