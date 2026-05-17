@@ -9,16 +9,9 @@ from src.email_sender import send
 from src.matcher import make_client, match_batch, MatchResult, QuotaExhausted, _BATCH_SIZE
 from src.models import JobListing
 from src import pre_filter
-from src.scrapers import alljobs, drushim, jobmaster, linkedin
+from src.scrapers import build_registry
+from src.scrapers.base import Scraper
 
-# Single source of truth: source name → scraper module.
-# Every scraper must expose: scrape() -> list[JobListing], fetch_full_description(url) -> str | None
-_SCRAPERS = {
-    "drushim": drushim,
-    "jobmaster": jobmaster,
-    "alljobs": alljobs,
-    "linkedin": linkedin,
-}
 _ENRICH_DELAY = 0.6
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -36,7 +29,7 @@ class ScoringSummary:
     quota_exhausted: bool
 
 
-def _scrape_all(scrapers: dict, terms: list[str]) -> list[JobListing]:
+def _scrape_all(scrapers: dict[str, Scraper], terms: list[str]) -> list[JobListing]:
     """Run each scraper; log counts; swallow per-scraper failures."""
     all_listings: list[JobListing] = []
     for name, scraper in scrapers.items():
@@ -77,7 +70,7 @@ def _pre_filter_experience(listings: list[JobListing], config: Config) -> list[J
     return kept
 
 
-def _enrich(listings: list[JobListing], scrapers: dict, delay: float = _ENRICH_DELAY) -> int:
+def _enrich(listings: list[JobListing], scrapers: dict[str, Scraper], delay: float = _ENRICH_DELAY) -> int:
     """Fetch full job-page descriptions in-place; return count enriched."""
     enriched = 0
     for listing in listings:
@@ -191,11 +184,12 @@ def run(
     config = load_config(config_path)
     cv_text = load_cv_text(cv_path)
     store = DedupStore(seen_path)
+    scrapers = build_registry()
 
-    all_listings = _scrape_all(_SCRAPERS, config.search_terms)
+    all_listings = _scrape_all(scrapers, config.search_terms)
     new_listings = _dedup(all_listings, store)
     filtered = _pre_filter(new_listings, config)
-    _enrich(filtered, _SCRAPERS)
+    _enrich(filtered, scrapers)
     # Re-run experience filter on enriched descriptions — requirements are often
     # only visible in the full job page, not the short scraped snippet.
     filtered = _pre_filter_experience(filtered, config)
