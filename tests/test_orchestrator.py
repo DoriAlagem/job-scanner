@@ -2,7 +2,7 @@ import json
 import yaml
 import pytest
 from unittest.mock import MagicMock, patch
-from src.orchestrator import _scrape_all, _enrich, run
+from src.orchestrator import _scrape_all, _enrich, _pre_filter_experience, run
 from src.matcher import MatchResult, BatchOutcome, QuotaExhausted
 from src.models import JobListing
 
@@ -79,6 +79,44 @@ def test_enrich_skips_listing_with_no_matching_scraper():
     count = _enrich([listing], {}, delay=0)
     assert count == 0
     assert listing.description == "original"
+
+
+# --- _pre_filter_experience ---
+
+def test_pre_filter_experience_drops_listing_with_experience_in_enriched_description(tmp_path):
+    """A listing that passed the initial pre-filter (short description had no years)
+    should be dropped post-enrich if the full description reveals 5 years required."""
+    import yaml
+    from src.config_loader import load_config
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": ["Tel Aviv"], "match_threshold": 60, "email_to": "x@x.com",
+        "search_terms": [],
+        "filters": {
+            "seniority_keywords": [], "unwanted_keywords": [], "max_years_experience": 3,
+        },
+    }))
+    config = load_config(str(p))
+    listing = _listing(description="Requires 5 years of Python experience.")
+    kept = _pre_filter_experience([listing], config)
+    assert kept == []
+
+
+def test_pre_filter_experience_keeps_listing_within_limit(tmp_path):
+    import yaml
+    from src.config_loader import load_config
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.dump({
+        "regions": ["Tel Aviv"], "match_threshold": 60, "email_to": "x@x.com",
+        "search_terms": [],
+        "filters": {
+            "seniority_keywords": [], "unwanted_keywords": [], "max_years_experience": 3,
+        },
+    }))
+    config = load_config(str(p))
+    listing = _listing(description="Looking for a developer with 2 years of experience.")
+    kept = _pre_filter_experience([listing], config)
+    assert len(kept) == 1
 
 
 # --- run() end-to-end pipeline ---

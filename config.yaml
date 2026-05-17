@@ -145,6 +145,6 @@ filters:
     - "sap specialist"
     - "notion user"
     - "notion specialist"
-  max_years_experience: 2
+  max_years_experience: 3
   role_max_years_overrides:
     data engineer: 1

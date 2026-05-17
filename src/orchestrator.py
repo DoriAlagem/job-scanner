@@ -67,6 +67,16 @@ def _pre_filter(listings: list[JobListing], config: Config) -> list[JobListing]:
     return kept
 
 
+def _pre_filter_experience(listings: list[JobListing], config: Config) -> list[JobListing]:
+    """Re-run experience check on enriched descriptions. Experience requirements are
+    often only visible in the full job page, not the short scraped snippet."""
+    kept = [l for l in listings if pre_filter.passes_experience(l, config)]
+    dropped = len(listings) - len(kept)
+    if dropped:
+        logger.info("Post-enrich experience filter dropped %d listing(s)", dropped)
+    return kept
+
+
 def _enrich(listings: list[JobListing], scrapers: dict, delay: float = _ENRICH_DELAY) -> int:
     """Fetch full job-page descriptions in-place; return count enriched."""
     enriched = 0
@@ -171,6 +181,9 @@ def run(
     new_listings = _dedup(all_listings, store)
     filtered = _pre_filter(new_listings, config)
     _enrich(filtered, _SCRAPERS)
+    # Re-run experience filter on enriched descriptions — requirements are often
+    # only visible in the full job page, not the short scraped snippet.
+    filtered = _pre_filter_experience(filtered, config)
     summary = _score(filtered, cv_text, config, store)
     _notify(summary, config.email_to)
 
