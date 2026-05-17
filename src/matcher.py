@@ -12,11 +12,12 @@ from src.models import JobListing
 logger = logging.getLogger(__name__)
 
 # Llama 3.1 8B on Groq free tier: 30 RPM, 14400 RPD, 6000 TPM
+# Batch size kept at 5 to stay under Groq's per-request payload limit
 _MODEL_NAME = "llama-3.1-8b-instant"
 _REQUEST_DELAY = 2.0
 _MAX_RETRIES = 3
 _RETRY_DELAY = 60
-_BATCH_SIZE = 10
+_BATCH_SIZE = 5
 
 
 class QuotaExhausted(Exception):
@@ -69,7 +70,10 @@ def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> Bat
             return BatchOutcome(results=results, failed_listings=failed)
         except Exception as e:
             err = str(e)
-            if "429" in err or "rate_limit" in err.lower():
+            if "413" in err:
+                logger.error("matcher: batch payload too large (%d listings) — skipping batch", len(listings))
+                return BatchOutcome(results={}, failed_listings=list(listings))
+            elif "429" in err or "rate_limit" in err.lower():
                 if attempt < _MAX_RETRIES - 1:
                     logger.warning("matcher: rate limited on batch — waiting %ds (attempt %d/%d)",
                                    _RETRY_DELAY, attempt + 1, _MAX_RETRIES)
