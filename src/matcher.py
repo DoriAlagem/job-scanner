@@ -112,9 +112,18 @@ RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
 {exp_rule}{role_overrides_block}
 If experience level is not mentioned, the job is eligible — continue scoring.
 
-RULE #2 — ROLE FIT:
-Wanted roles: software engineer, backend, Python, DevOps, QA, automation, data engineer, ML, cloud, infrastructure, IoT, embedded systems, IT support (L1 helpdesk only — NOT hardware repair or PC technician).
-Unwanted: full-stack, UI/UX, economics, freelance, coordinator, מתאם.
+RULE #2 — ROLE FIT (NON-NEGOTIABLE):
+Score EXACTLY 0 if the role is primarily any of the following — regardless of skill overlap:
+- Project management, PMO, program manager, technical PMO
+- Marketing (analyst, manager, field marketer, growth)
+- Sales (any kind: field sales, account executive, sales rep)
+- Physics, chemistry, biology, or other natural sciences
+- IT administration of specific products (Citrix, SAP, Notion, Salesforce)
+- Warehouse, logistics, inventory
+- Social work, welfare, psychology
+- Any other non-software-engineering role
+
+Wanted roles (score normally): software engineer, backend, Python, DevOps, QA/automation engineer, data engineer, ML engineer, cloud/infrastructure engineer, IoT, embedded systems, IT support L1 helpdesk.
 
 RULE #3 — SKILLS:
 Candidate skills: Python, C, C++, SQL, REST APIs, distributed systems, MQTT, NumPy, Pandas, Scikit-learn, AWS, Git, basic ML.
@@ -130,6 +139,8 @@ Score high (70-90) if most primary required skills match. Score low if a skill c
 - "Senior Python Developer", "5+ years required" → score 0, "Requires 5 years of experience."
 - "Backend Developer", "Python, REST APIs, no experience mentioned" → score 82, "No experience requirement mentioned; strong Python and REST API match."
 - "Full Stack Developer", "React, Node.js, 1 year" → score 0, "Full-stack is an unwanted role."
+- "Junior Project Manager", "no experience mentioned, Python skills useful" → score 0, "Project management is not a wanted role."
+- "Marketing Data Analyst", "Python, SQL, no experience mentioned" → score 0, "Marketing analyst is not a wanted role."
 
 ## Output
 Return a JSON object with ONE field "results", an array of EXACTLY {len(listings)} objects in order. Each: "score" (int 0-100) and "reasoning" (one sentence stating experience requirement found, or "no experience requirement mentioned" if absent).
