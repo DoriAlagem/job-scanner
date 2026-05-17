@@ -5,7 +5,7 @@ already been pre-filtered."""
 
 import json
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from src.matcher import match, match_batch, MatchResult, _build_batch_prompt
 from src.models import JobListing
 from src.config_loader import Config, FilterConfig
@@ -55,8 +55,7 @@ def _mock_groq_batch_response(*entries: tuple[int, str]):
 
 def test_returns_match_result_with_correct_score_and_reasoning(listing, cv_text, config):
     mock_client = _mock_groq_batch_response((85, "Strong Python skills match the role."))
-    with patch("src.matcher.Groq", return_value=mock_client):
-        result = match(listing, cv_text, config)
+    result = match(listing, cv_text, config, client=mock_client)
 
     assert isinstance(result, MatchResult)
     assert result.score == 85
@@ -72,8 +71,7 @@ def test_batch_returns_results_for_multiple_listings(cv_text, config):
                    url="https://x.com/2", description="", source="drushim"),
     ]
     mock_client = _mock_groq_batch_response((85, "Great fit."), (60, "Decent fit."))
-    with patch("src.matcher.Groq", return_value=mock_client):
-        outcome = match_batch(listings, cv_text, config)
+    outcome = match_batch(listings, cv_text, config, client=mock_client)
 
     assert len(outcome.results) == 2
     assert outcome.results["https://x.com/1"].score == 85
@@ -110,8 +108,7 @@ def test_batch_handles_malformed_response(listing, cv_text, config):
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
 
-    with patch("src.matcher.Groq", return_value=mock_client):
-        outcome = match_batch(listings, cv_text, config)
+    outcome = match_batch(listings, cv_text, config, client=mock_client)
 
     assert len(outcome.failed_listings) == 1
     assert outcome.failed_listings[0] is listing
@@ -121,8 +118,7 @@ def test_batch_handles_malformed_response(listing, cv_text, config):
 def test_empty_input_returns_empty_outcome(cv_text, config):
     """match_batch with no listings should not call Groq."""
     mock_client = MagicMock()
-    with patch("src.matcher.Groq", return_value=mock_client):
-        outcome = match_batch([], cv_text, config)
+    outcome = match_batch([], cv_text, config, client=mock_client)
 
     assert outcome.results == {}
     assert outcome.failed_listings == []

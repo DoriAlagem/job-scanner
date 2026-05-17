@@ -40,15 +40,30 @@ class BatchOutcome:
     failed_listings: list[JobListing]
 
 
-def match_batch(listings: list[JobListing], cv_text: str, config: Config) -> BatchOutcome:
+def make_client() -> Groq:
+    """Construct the Groq client from the environment. Callers that want to
+    share one client across many batches should call this once and pass the
+    result to match_batch()."""
+    return Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
+
+
+def match_batch(
+    listings: list[JobListing],
+    cv_text: str,
+    config: Config,
+    client: Groq | None = None,
+) -> BatchOutcome:
     """Score a batch of listings in one Groq call. Assumes the input has already been
     pre-filtered (see src/pre_filter.py). Returns BatchOutcome with successful results
-    keyed by listing index and a list of listings that failed to evaluate."""
+    keyed by listing index and a list of listings that failed to evaluate.
+
+    Pass a pre-constructed client to share it across batches (and to inject a
+    mock in tests without patching the module)."""
     if not listings:
         return BatchOutcome(results={}, failed_listings=[])
 
-    api_key = os.environ.get("GROQ_API_KEY", "")
-    client = Groq(api_key=api_key)
+    if client is None:
+        client = make_client()
     prompt = _build_batch_prompt(listings, cv_text, config)
 
     for attempt in range(_MAX_RETRIES):
@@ -179,6 +194,6 @@ def _parse_batch_response(text: str, listings: list[JobListing]) -> list[MatchRe
 
 
 # Backwards-compatible single-listing match (used by tests, not by orchestrator)
-def match(listing: JobListing, cv_text: str, config: Config) -> MatchResult | None:
-    outcome = match_batch([listing], cv_text, config)
+def match(listing: JobListing, cv_text: str, config: Config, client: Groq | None = None) -> MatchResult | None:
+    outcome = match_batch([listing], cv_text, config, client=client)
     return outcome.results.get(listing.url)
