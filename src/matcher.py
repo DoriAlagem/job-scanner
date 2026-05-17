@@ -8,6 +8,7 @@ from groq import Groq
 
 from src.config_loader import Config
 from src.models import JobListing
+from src import pre_filter
 
 logger = logging.getLogger(__name__)
 
@@ -95,21 +96,12 @@ def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config
     )
 
     max_yrs = config.filters.max_years_experience
-    exp_rule = (
-        f"Score EXACTLY 0 if the listing requires more than {max_yrs} year(s) of experience, "
-        f"or mentions: senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. "
-        f"This includes ranges like '4-6 years' or '3-5 שנות'. This is the most important rule — no exceptions."
-    )
-    override_lines = "\n".join(
-        f"- {role.title()} roles: score EXACTLY 0 if more than {yrs} year(s) of experience required."
-        for role, yrs in config.filters.role_max_years_overrides.items()
-    )
-    role_overrides_block = f"\nROLE-SPECIFIC OVERRIDES (apply before the general rule):\n{override_lines}" if override_lines else ""
+    exp_block = pre_filter.experience_prompt_block(config)
 
     return f"""You are evaluating job listings for a JUNIOR candidate (0-{max_yrs} years experience, 3rd-year CS student).
 
 RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
-{exp_rule}{role_overrides_block}
+{exp_block}
 If experience level is not mentioned, the job is eligible — continue scoring.
 
 RULE #2 — ROLE FIT (NON-NEGOTIABLE):

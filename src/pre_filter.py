@@ -67,6 +67,29 @@ def passes_experience(listing: JobListing, config: Config) -> bool:
     return _passes_experience(listing, config)
 
 
+def experience_prompt_block(config: Config) -> str:
+    """Return the LLM prompt fragment that enforces experience limits.
+
+    Centralises experience-filter knowledge so matcher.py doesn't need to
+    duplicate the rule logic that already lives here.
+    """
+    max_yrs = config.filters.max_years_experience
+    exp_rule = (
+        f"Score EXACTLY 0 if the listing requires more than {max_yrs} year(s) of experience, "
+        f"or mentions: senior, lead, principal, head of, בכיר, ראש צוות, or any similar seniority signal. "
+        f"This includes ranges like '4-6 years' or '3-5 שנות'. This is the most important rule — no exceptions."
+    )
+    override_lines = "\n".join(
+        f"- {role.title()} roles: score EXACTLY 0 if more than {yrs} year(s) of experience required."
+        for role, yrs in config.filters.role_max_years_overrides.items()
+    )
+    role_overrides = (
+        f"\nROLE-SPECIFIC OVERRIDES (apply before the general rule):\n{override_lines}"
+        if override_lines else ""
+    )
+    return f"{exp_rule}{role_overrides}"
+
+
 def _passes_experience(listing: JobListing, config: Config) -> bool:
     """False if the description explicitly requires more experience than allowed."""
     title_lower = listing.title.lower()
