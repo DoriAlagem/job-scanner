@@ -194,10 +194,11 @@ def run(
     # only visible in the full job page, not the short scraped snippet.
     filtered = _pre_filter_experience(filtered, config)
     summary = _score(filtered, cv_text, config, store)
-    _notify(summary, config.email_to)
 
     store.save()
     logger.info("seen_jobs.json updated")
+
+    _notify(summary, config.email_to)
 
 
 if __name__ == "__main__":
