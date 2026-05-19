@@ -16,13 +16,35 @@ _HEADERS = {
 _BASE_URL = "https://www.alljobs.co.il"
 _REQUEST_DELAY = 1.5
 
+# Category position IDs from SearchEngineData.js — text-search (q=) is processed
+# client-side by Angular and is ignored in the server-rendered HTML, so we scrape
+# by category instead.
+_CATEGORIES = [
+    1694,  # מתכנת Python
+    1759,  # מתכנת Backend
+    1183,  # Backend Engineer
+    432,   # QA תוכנה
+    434,   # מהנדס בדיקות
+    1532,  # בדיקות ידניות
+    1533,  # בדיקות אוטומטיות
+    1984,  # QA Automation Infrastructure
+    2011,  # QA אוטומציה
+    1706,  # איש DevOps
+    2028,  # מהנדס/ת דאטה
+    1779,  # NLP/Machine Learning
+    2006,  # AI Engineer
+]
 
-def scrape(terms: list[str]) -> list[JobListing]:
+
+def scrape(terms: list[str] | None = None) -> list[JobListing]:
+    # alljobs ignores `terms` — it scrapes by hi-tech category instead.
+    # The q= text-search parameter is handled client-side by Angular and
+    # returns the same featured listings regardless of query when fetched statically.
     return scrape_terms(
         "alljobs",
-        lambda term: f"{_BASE_URL}/SearchResultsGuest.aspx?pos=1&type=4&city=0&q={term.replace(' ', '+')}",
+        lambda cat: f"{_BASE_URL}/SearchResultsGuest.aspx?page=1&position={cat}&type=4&source=&duration=&region=&city=0&pos=1",
         _parse_listings,
-        terms,
+        [str(c) for c in _CATEGORIES],
     )
 
 
