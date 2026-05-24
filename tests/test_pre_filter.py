@@ -78,6 +78,11 @@ def test_drops_listings_with_too_many_years(config):
         "3-5 years experience.",
         "דרישות: 5 שנות ניסיון בפיתוח Python.",
         "מינימום 3 שנים ניסיון",
+        # "experience: N years" — number after keyword
+        "Experience: 3 years",
+        "Experience: 3+ years",
+        "Required experience: 5 years",
+        "exp: 4 years",
     ]
     for desc in descriptions:
         kept = pre_filter.apply([_listing(description=desc)], config)
