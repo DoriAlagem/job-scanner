@@ -20,6 +20,8 @@ _YEARS_PATTERNS = [
     re.compile(r"(\d+)\s*[-–]\s*\d+\s*years?", re.IGNORECASE),
     re.compile(r"(?:minimum|at least|min\.?|over)\s+(\d+)\s*years?", re.IGNORECASE),
     re.compile(r"(\d+)\s*years?\s+(?:of\s+)?(?:\w+\s+){0,3}(?:experience|exp\.?|professional)", re.IGNORECASE),
+    # "Experience: 4 years" — number comes after the keyword
+    re.compile(r"(?:experience|exp\.?)[:\s]+(\d+)\s*(?:\+\s*)?years?", re.IGNORECASE),
     re.compile(r"(\d+)\s*שנ(?:ות|ים|ה)"),
     re.compile(r"(\d+)\s*[-–]\s*\d+\s*שנ(?:ות|ים|ה)"),
 ]
