@@ -38,7 +38,13 @@ email_to: dor3382@gmail.com
 # Search terms used by alljobs/jobmaster/linkedin scrapers.
 # Drushim ignores this and scrapes by hi-tech category.
 search_terms:
-  - python
+  - junior python
+  - junior software engineer
+  - junior backend
+  - junior devops
+  - junior qa
+  - junior automation
+  - python developer
   - software engineer
   - devops
   - qa automation
@@ -50,6 +56,7 @@ search_terms:
   - data engineer
   - machine learning
   - cloud engineer
+  - סטודנט תוכנה
   - בדיקות
   - אוטומציה
   - מפתח תוכנה
@@ -145,6 +152,6 @@ filters:
     - "sap specialist"
     - "notion user"
     - "notion specialist"
-  max_years_experience: 3
+  max_years_experience: 2
   role_max_years_overrides:
     data engineer: 1
