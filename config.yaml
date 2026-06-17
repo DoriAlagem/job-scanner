@@ -38,28 +38,41 @@ email_to: dor3382@gmail.com
 # Search terms used by alljobs/jobmaster/linkedin scrapers.
 # Drushim ignores this and scrapes by hi-tech category.
 search_terms:
+  # junior-focused
   - junior python
   - junior software engineer
   - junior backend
+  - junior node.js
+  - junior javascript
   - junior devops
   - junior qa
   - junior automation
+  # backend / general
   - python developer
   - software engineer
+  - backend developer
+  - node.js developer
+  - javascript developer
   - devops
   - qa automation
   - backend
   - qa
   - manual qa
   - automation engineer
+  - automation developer
+  - playwright
   - integration
   - data engineer
+  - data analyst
   - machine learning
   - cloud engineer
+  - microservices
+  # Hebrew
   - סטודנט תוכנה
   - בדיקות
   - אוטומציה
   - מפתח תוכנה
+  - מפתח node
   - בק אנד
   - אינטגרציה
 
