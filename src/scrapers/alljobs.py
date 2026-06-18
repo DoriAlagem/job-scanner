@@ -21,6 +21,7 @@ _REQUEST_DELAY = 1.5
 # by category instead.
 _CATEGORIES = [
     1694,  # מתכנת Python
+    1711,  # מתכנת Node.js
     1759,  # מתכנת Backend
     1183,  # Backend Engineer
     432,   # QA תוכנה
@@ -30,6 +31,8 @@ _CATEGORIES = [
     1984,  # QA Automation Infrastructure
     2011,  # QA אוטומציה
     1706,  # איש DevOps
+    1732,  # Data Analyst
+    1733,  # Data Scientist
     2028,  # מהנדס/ת דאטה
     1779,  # NLP/Machine Learning
     2006,  # AI Engineer
