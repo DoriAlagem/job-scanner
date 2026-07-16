@@ -53,28 +53,39 @@ search_terms:
   - backend developer
   - node.js developer
   - javascript developer
+  - api developer
+  - rest api
   - devops
-  - qa automation
   - backend
+  - microservices
+  - integration
+  - cloud engineer
+  # QA / test automation (Playwright, Pytest, Postman)
+  - qa automation
   - qa
   - manual qa
   - automation engineer
   - automation developer
+  - test automation
+  - sdet
   - playwright
-  - integration
+  # data / ML (incoming M.Sc. ML & Big Data)
   - data engineer
   - data analyst
+  - data scientist
   - machine learning
-  - cloud engineer
-  - microservices
+  - big data
   # Hebrew
   - סטודנט תוכנה
   - בדיקות
   - אוטומציה
   - מפתח תוכנה
   - מפתח node
+  - מפתח בק אנד
   - בק אנד
   - אינטגרציה
+  - אנליסט נתונים
+  - מדען נתונים
 
 filters:
   seniority_keywords:

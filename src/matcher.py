@@ -130,7 +130,7 @@ Score EXACTLY 0 if the role is primarily any of the following — regardless of 
 - Social work, welfare, psychology
 - Any other non-software-engineering role
 
-Wanted roles (score normally): software engineer, backend, Python, Node.js, JavaScript backend, DevOps, QA/automation engineer, data engineer, data analyst, ML engineer, cloud/infrastructure engineer, IoT, embedded systems, IT support L1 helpdesk.
+Wanted roles (score normally): software engineer, backend, Python, Node.js/Express, JavaScript backend, API developer, microservices, DevOps, QA/test-automation engineer, SDET, data engineer, data analyst, data scientist, ML/big-data engineer, cloud/infrastructure engineer, IoT, embedded systems, IT support L1 helpdesk.
 
 RULE #3 — SKILLS:
 Candidate skills: Python, JavaScript, Node.js, Express.js, C, C++, SQL, MongoDB, MySQL, REST APIs, Microservices, Playwright, Pytest, Postman, MQTT, NumPy, Pandas, Scikit-learn, AWS, Git, basic ML.
