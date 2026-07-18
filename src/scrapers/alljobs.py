@@ -20,10 +20,12 @@ _REQUEST_DELAY = 1.5
 # client-side by Angular and is ignored in the server-rendered HTML, so we scrape
 # by category instead.
 _CATEGORIES = [
+    426,   # מתכנתים (general software developers)
     1694,  # מתכנת Python
     1711,  # מתכנת Node.js
     1759,  # מתכנת Backend
     1183,  # Backend Engineer
+    431,   # הייטק אבטחת איכות QA (hi-tech QA, broad)
     432,   # QA תוכנה
     434,   # מהנדס בדיקות
     1532,  # בדיקות ידניות
