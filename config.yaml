@@ -47,24 +47,24 @@ search_terms:
   - junior devops
   - junior qa
   - junior automation
-  # entry-level (graduate / intern / student / no-experience)
-  - entry level
+  # entry-level (role-anchored to avoid leaking law / EE / other fields)
   - entry level software
+  - entry level developer
   - graduate software
-  - graduate engineer
+  - graduate developer
   - software engineer intern
+  - software developer intern
   - backend intern
   - qa intern
   - junior developer
   - junior programmer
   - student developer
-  - trainee
+  - trainee developer
   - מתמחה תוכנה
+  - מתמחה פיתוח
   - מפתח ג'וניור
-  - ג'וניור
-  - משרת סטודנט
-  - דרושים ללא ניסיון
-  - ללא ניסיון
+  - מתכנת ג'וניור
+  - סטודנט למדעי המחשב
   # backend / general
   - python developer
   - software engineer
@@ -194,6 +194,35 @@ filters:
     - "sap specialist"
     - "notion user"
     - "notion specialist"
+    # law / legal
+    - "lawyer"
+    - "attorney"
+    - "paralegal"
+    - "legal counsel"
+    - "law clerk"
+    - "עורך דין"
+    - "עורכת דין"
+    - 'עו"ד'
+    - "משפטן"
+    - "משפטנית"
+    - "מתמחה משפט"
+    # hardware / electrical / electronics engineering (non-software)
+    - "electrical engineer"
+    - "electronics engineer"
+    - "hardware engineer"
+    - "rf engineer"
+    - "analog engineer"
+    - "מהנדס חשמל"
+    - "מהנדסת חשמל"
+    - "מהנדס אלקטרוניקה"
+    - "מהנדסת אלקטרוניקה"
+    - "מהנדס חומרה"
+    - "מהנדסת חומרה"
+    - "הנדסת חשמל"
+    - "הנדסת אלקטרוניקה"
+    - "fpga"
+    - "vlsi"
+    - " asic "
   max_years_experience: 2
   role_max_years_overrides:
     data engineer: 1
