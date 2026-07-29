@@ -51,7 +51,9 @@ def _drop_reason(listing: JobListing, config: Config) -> str | None:
 
 def _passes_region(listing: JobListing, config: Config) -> bool:
     loc = listing.location.strip().lower()
-    if not loc or loc in ("israel", "unknown", ""):
+    # "מספר מקומות" ("multiple locations") is drushim's placeholder for
+    # ambiguous/multi-site listings — treat like "unknown", not a specific city.
+    if not loc or loc in ("israel", "unknown", "", "מספר מקומות"):
         return True
     return any(region.lower() in loc or loc in region.lower() for region in config.regions)
 
