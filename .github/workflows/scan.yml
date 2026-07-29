@@ -76,7 +76,7 @@ jobs:
           msg = MIMEText(
               "The job scanner workflow failed on GitHub Actions.\n\n"
               "Check the run logs at:\n"
-              "https://github.com/DORI2001/job-scanner/actions\n",
+              "https://github.com/DoriAlagem/job-scanner/actions\n",
               "plain", "utf-8"
           )
           msg["Subject"] = "Job Scanner: workflow failed"
