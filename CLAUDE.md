@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues are tracked in GitHub Issues on DORI2001/job-scanner. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues on DoriAlagem/job-scanner. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
