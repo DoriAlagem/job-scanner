@@ -59,6 +59,13 @@ def test_keeps_listing_with_unknown_location(config):
     assert len(kept) == 1
 
 
+def test_keeps_drushim_multi_location_placeholder(config):
+    """'מספר מקומות' (multiple locations) is drushim's ambiguous-location
+    placeholder — should be kept like an unknown location, not dropped."""
+    kept = pre_filter.apply([_listing(location="מספר מקומות")], config)
+    assert len(kept) == 1
+
+
 def test_drops_senior_titles(config):
     kept = pre_filter.apply([_listing(title="Senior Software Engineer")], config)
     assert kept == []
