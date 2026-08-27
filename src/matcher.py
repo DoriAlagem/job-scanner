@@ -12,9 +12,10 @@ from src import pre_filter
 
 logger = logging.getLogger(__name__)
 
-# Llama 3.1 8B on Groq free tier: 30 RPM, 14400 RPD, 6000 TPM
+# llama-3.1-8b-instant was decommissioned by Groq; gpt-oss-20b is the current
+# small/cheap json_mode-capable replacement.
 # Batch size kept at 5 to stay under Groq's per-request payload limit
-_MODEL_NAME = "llama-3.1-8b-instant"
+_MODEL_NAME = "openai/gpt-oss-20b"
 _REQUEST_DELAY = 2.0
 _MAX_RETRIES = 3
 _RETRY_DELAY = 60
