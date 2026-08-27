@@ -1,4 +1,4 @@
-from src.scrapers import alljobs, drushim, google, jobmaster, linkedin
+from src.scrapers import alljobs, dell, drushim, google, jobmaster, linkedin
 from src.scrapers.base import Scraper
 
 
@@ -14,4 +14,5 @@ def build_registry() -> dict[str, Scraper]:
         "alljobs": alljobs,
         "linkedin": linkedin,
         "google": google,
+        "dell": dell,
     }
