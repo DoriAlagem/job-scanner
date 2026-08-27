@@ -18,18 +18,58 @@ _REQUEST_DELAY = 2.0
 # f_TPR=r2592000 = posted in last 30 days; dedup prevents re-sending seen jobs
 _BASE_URL = "https://il.linkedin.com/jobs/search"
 
+# Large corporates with an Israel presence, pulled via LinkedIn's f_C company
+# filter — several (Apple, Microsoft, HP) can't be scraped directly from
+# their own career sites due to JS SPA + bot protection. IDs are each
+# company's numeric LinkedIn organization ID.
+_TARGET_COMPANIES = {
+    "Google": "1441",
+    "Microsoft": "1035",
+    "Apple": "162479",
+    "HP": "5390798",
+    "Dell": "15088102",
+    "Intel": "1053",
+    "Mobileye": "24017",
+    "NVIDIA": "3608",
+    "Amazon": "1586",
+    "Meta": "10667",
+    "IBM": "1009",
+    "Cisco": "1063",
+    "Qualcomm": "2017",
+    "SAP": "1115",
+    "Salesforce": "3185",
+}
+
 
 def scrape(terms: list[str]) -> list[JobListing]:
     def _build_url(term: str) -> str:
         return f"{_BASE_URL}?{urlencode({'keywords': term, 'location': 'Israel', 'f_TPR': 'r2592000'})}"
 
-    return scrape_terms(
+    listings = scrape_terms(
         "linkedin",
         _build_url,
         _parse_listings,
         terms,
         request_delay=_REQUEST_DELAY,
     )
+
+    def _build_company_url(company_id: str) -> str:
+        return f"{_BASE_URL}?{urlencode({'f_C': company_id, 'location': 'Israel'})}"
+
+    company_listings = scrape_terms(
+        "linkedin",
+        _build_company_url,
+        _parse_listings,
+        list(_TARGET_COMPANIES.values()),
+        request_delay=_REQUEST_DELAY,
+    )
+
+    seen_urls = {l.url for l in listings}
+    for listing in company_listings:
+        if listing.url not in seen_urls:
+            seen_urls.add(listing.url)
+            listings.append(listing)
+    return listings
 
 
 def fetch_full_description(url: str) -> str | None:
