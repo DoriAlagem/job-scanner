@@ -98,6 +98,14 @@ search_terms:
   - data scientist
   - machine learning
   - big data
+  # M.Sc student positions
+  - msc student
+  - graduate student position
+  - student position
+  - research assistant
+  - machine learning intern
+  - ml intern
+  - student researcher
   # Hebrew
   - סטודנט תוכנה
   - בדיקות
@@ -109,6 +117,10 @@ search_terms:
   - אינטגרציה
   - אנליסט נתונים
   - מדען נתונים
+  - סטודנט לתואר שני
+  - עוזר מחקר
+  - עוזרת מחקר
+  - משרת סטודנט
 
 filters:
   seniority_keywords:
