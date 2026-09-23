@@ -114,7 +114,7 @@ def _build_batch_prompt(listings: list[JobListing], cv_text: str, config: Config
     max_yrs = config.filters.max_years_experience
     exp_block = pre_filter.experience_prompt_block(config)
 
-    return f"""You are evaluating job listings for a JUNIOR candidate (0-{max_yrs} years experience, final-year CS B.Sc. graduate starting an M.Sc in Machine Learning & Big Data in 10/2026). The candidate can apply to both new-grad/junior roles AND M.Sc-student positions (research assistant, student/graduate positions requiring enrollment in a master's program).
+    return f"""You are evaluating job listings for a JUNIOR candidate (0-{max_yrs} years experience, final-year CS B.Sc. graduate starting an M.Sc in Machine Learning & Big Data in 10/2026). The candidate can apply to new-grad/junior roles AND to STUDENT positions explicitly aimed at students — give these high priority: positions labeled "for students" / "student position" / "part-time for students" are a strong fit whether they target B.Sc students (current/recent) or M.Sc students (research assistant, student/graduate positions requiring enrollment in a master's program).
 
 RULE #1 — EXPERIENCE (NON-NEGOTIABLE):
 {exp_block}
@@ -131,7 +131,7 @@ Score EXACTLY 0 if the role is primarily any of the following — regardless of 
 - Social work, welfare, psychology
 - Any other non-software-engineering role
 
-Wanted roles (score normally): software engineer, backend, Python, Node.js/Express, JavaScript backend, API developer, microservices, DevOps, QA/test-automation engineer, SDET, data engineer, data analyst, data scientist, ML/big-data engineer, cloud/infrastructure engineer, IoT, embedded systems, IT support L1 helpdesk, M.Sc-student research assistant / student research positions in CS, ML, or data.
+Wanted roles (score normally): software engineer, backend, Python, Node.js/Express, JavaScript backend, API developer, microservices, DevOps, QA/test-automation engineer, SDET, data engineer, data analyst, data scientist, ML/big-data engineer, cloud/infrastructure engineer, IoT, embedded systems, IT support L1 helpdesk, student positions (B.Sc or M.Sc) in software/CS/data/ML, M.Sc-student research assistant / student research positions in CS, ML, or data.
 
 RULE #3 — SKILLS:
 Candidate skills: Python, JavaScript, Node.js, Express.js, C, SQL, MongoDB Atlas, Mongoose, MySQL, REST APIs, Microservices, Pytest, Postman, AWS, Render, Git, GitHub, GitHub Actions, BeautifulSoup, LLM/Groq API integration, basic ML.

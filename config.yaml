@@ -38,6 +38,39 @@ email_to: dor3382@gmail.com
 # Search terms used by alljobs/jobmaster/linkedin scrapers.
 # Drushim ignores this and scrapes by hi-tech category.
 search_terms:
+  # STUDENT POSITIONS — high priority (B.Sc and M.Sc students both eligible)
+  - student position
+  - position for students
+  - job for students
+  - students only
+  - part time student position
+  - bsc student
+  - msc student
+  - b.sc. student
+  - m.sc. student
+  - student software developer
+  - student software engineer
+  - student backend developer
+  - student developer position
+  - graduate student position
+  - research assistant
+  - student researcher
+  - machine learning intern
+  - ml intern
+  - משרת סטודנט
+  - משרה לסטודנט
+  - משרה לסטודנטים
+  - לסטודנטים בלבד
+  - מתאים לסטודנטים
+  - דרוש סטודנט
+  - דרושה סטודנטית
+  - סטודנט להנדסת תוכנה
+  - סטודנט למדעי המחשב
+  - סטודנט למדמ"ח
+  - סטודנט לתואר שני
+  - סטודנטית לתואר שני
+  - עוזר מחקר
+  - עוזרת מחקר
   # junior-focused
   - junior python
   - junior software engineer
@@ -69,7 +102,6 @@ search_terms:
   - מתמחה
   - מפתח ג'וניור
   - מתכנת ג'וניור
-  - סטודנט למדעי המחשב
   # backend / general
   - python developer
   - software engineer
@@ -98,14 +130,6 @@ search_terms:
   - data scientist
   - machine learning
   - big data
-  # M.Sc student positions
-  - msc student
-  - graduate student position
-  - student position
-  - research assistant
-  - machine learning intern
-  - ml intern
-  - student researcher
   # Hebrew
   - סטודנט תוכנה
   - בדיקות
@@ -117,10 +141,6 @@ search_terms:
   - אינטגרציה
   - אנליסט נתונים
   - מדען נתונים
-  - סטודנט לתואר שני
-  - עוזר מחקר
-  - עוזרת מחקר
-  - משרת סטודנט
 
 filters:
   seniority_keywords:
