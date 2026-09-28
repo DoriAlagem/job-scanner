@@ -33,7 +33,7 @@ def _parse_listings(html: str, seen_urls: set[str]) -> list[JobListing]:
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
-    for item in soup.select(".job-item"):
+    for item in soup.select('article[data-nagish="job-card-item"]'):
         try:
             listing = _parse_item(item)
             if listing and listing.url not in seen_urls:
@@ -62,32 +62,28 @@ def fetch_full_description(url: str) -> str | None:
         return None
 
 
+def _text(item, suffix: str) -> str:
+    # CSS-module class names carry a build hash prefix; match on the stable suffix only
+    el = item.select_one(f'[class*="__{suffix}"]')
+    return el.get_text(" ", strip=True) if el else ""
+
+
 def _parse_item(item) -> JobListing | None:
-    title_el = item.select_one("h3 .job-url")
-    if not title_el:
-        return None
-    title = title_el.get_text(strip=True)
-
-    company_el = item.select_one(".font-weight-medium.underline")
-    company = company_el.get_text(strip=True) if company_el else "Unknown"
-
+    title = _text(item, "title")
     link_el = item.select_one('a[href*="/job/"]')
-    if not link_el:
+    if not title or not link_el:
         return None
     href = link_el.get("href", "")
     url = _BASE_URL + href if href.startswith("/") else href
 
-    desc_el = item.select_one(".job-intro p")
-    description = desc_el.get_text(strip=True) if desc_el else ""
+    company = _text(item, "companyName") or "Unknown"
 
-    spans = [s.get_text(strip=True) for s in item.select(".display-18")]
-    location_candidates = [
-        s.rstrip("|")
-        for s in spans
-        if s and s != "|" and "שנים" not in s and "משרה" not in s
-        and "לפני" not in s and "לצפייה" not in s and "+" not in s
-    ]
-    location = location_candidates[0] if location_candidates else "Israel"
+    # meta rows: [location, "<experience> <job type>", posted-ago]
+    rows = [r.get_text(" ", strip=True) for r in item.select('[class*="meta-module"][class*="__row"]')]
+    location = rows[0] if rows else "Israel"
+    experience = rows[1] if len(rows) > 1 else ""
+
+    description = f"{experience} {_text(item, 'description')}".strip()
 
     return JobListing(
         title=title,
