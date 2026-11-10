@@ -15,7 +15,7 @@ One execution of the scanner. Happens twice daily (06:00 and 18:00 Israel time),
 A single email sent after each Run containing all Matching Listings, formatted in English with match score, short description, and fit reasoning.
 
 **Match Score**
-A percentage (0–100) produced by Groq (Llama 3.1 8B Instant) representing how well a Job Listing fits the user's CV and preferences config. Only listings scoring ≥ the configured `match_threshold` (default 60%) are included in the Digest Email.
+A percentage (0–100) produced by Groq (`openai/gpt-oss-20b`; Llama 3.1 8B Instant until Groq retired it) representing how well a Job Listing fits the user's CV and preferences config. Only listings scoring ≥ the configured `match_threshold` (default 60%) are included in the Digest Email.
 
 **Pre-Filter**
 A rule-based pass that runs before any LLM call. Drops listings that fail region, title-keyword (seniority/unwanted roles), or experience-year checks. Pre-filtered listings are not marked Seen, so they re-appear if filter rules change in a future Run.
