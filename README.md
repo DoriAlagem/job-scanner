@@ -1,13 +1,13 @@
 # Job Scanner
 
-Automated job scanner for the Israeli market. Runs twice daily, scrapes major job boards, scores listings against your CV using Groq (Llama 3.1), and emails you the matches.
+Automated job scanner for the Israeli market. Runs twice daily, scrapes major job boards, scores listings against your CV using an LLM on Groq (GPT-OSS 20B), and emails you the matches.
 
 ## How it works
 
-1. Scrapes LinkedIn, drushim.co.il, jobmaster.co.il, and alljobs.co.il
+1. Scrapes LinkedIn, drushim.co.il, jobmaster.co.il, alljobs.co.il, and the Google and Dell careers sites
 2. Filters by center district location
-3. Scores each listing against your CV and preferences via Groq (Llama 3.1)
-4. Sends a digest email with listings scoring ≥ 70%
+3. Scores each listing against your CV and preferences via Groq (`openai/gpt-oss-20b`)
+4. Sends a digest email with listings scoring at or above `match_threshold` (60% by default)
 5. Tracks seen listings so you never get the same job twice
 
 Runs at **06:00 and 18:00 Israel time** via cron-job.org, which triggers the GitHub Actions workflow at exact times.
